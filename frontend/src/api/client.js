@@ -1,4 +1,8 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD
+    ? 'https://aj-clothing-backend.vercel.app/api/v1'
+    : 'http://localhost:8000/api/v1')
 
 export const apiFetch = async (path, opts = {}) => {
   const res = await fetch(`${API_BASE}${path}`, {
