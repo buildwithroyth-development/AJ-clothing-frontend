@@ -42,3 +42,151 @@
   border: 1px solid rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
 }
+
+/* ==========================================================================
+   Stock & Product Page Enhancements
+   ========================================================================== */
+
+.search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 320px;
+  width: 100%;
+}
+
+.search-wrap .search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search-wrap input.search-input {
+  padding-left: 36px;
+  padding-right: 32px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.search-wrap input.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--light);
+}
+
+.search-wrap .search-clear {
+  position: absolute;
+  right: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.search-wrap .search-clear:hover {
+  color: var(--ink);
+  background: var(--bg);
+}
+
+/* Category Filter Pills */
+.filters button .filter-count {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f1eee7;
+  color: var(--muted);
+  font-weight: 600;
+  margin-left: 5px;
+  transition: all 0.15s ease;
+}
+
+.filters button.active .filter-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* SKU Badge */
+.sku-badge {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: #f3efe8;
+  color: #6a5e52;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #e2ddd3;
+}
+
+/* Size Badge Highlight */
+.size-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--light);
+  color: var(--accent);
+  border: 1px solid rgba(166, 78, 61, 0.22);
+  letter-spacing: 0.02em;
+}
+
+/* Modal Enhancements */
+.modal {
+  animation: fadeIn 0.18s ease-out;
+}
+
+.modal-card {
+  animation: scaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 20px 40px -10px rgba(20, 26, 21, 0.25);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Notice Banner */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

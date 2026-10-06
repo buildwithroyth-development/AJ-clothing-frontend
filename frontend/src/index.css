@@ -205,8 +205,11 @@ textarea:focus-visible {
 .side nav .nav-icon {
   font-style: normal;
   width: 22px;
-  text-align: center;
-  font-size: 18px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   line-height: 1;
 }
 
@@ -497,16 +500,25 @@ textarea:focus-visible {
 
 .stat i,
 .stat .stat-icon {
-  display: grid;
-  place-items: center;
-  height: 35px;
-  width: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  width: 36px;
   border-radius: 9px;
   background: var(--light);
   color: var(--accent);
   font-size: 18px;
   font-style: normal;
   margin-bottom: 16px;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .stat small {
@@ -720,10 +732,12 @@ label {
 
 .table-scroll {
   overflow: auto;
+  border-radius: var(--radius-md);
 }
 
 table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
   min-width: 640px;
 }
@@ -734,31 +748,83 @@ th {
   font-size: 10px;
   letter-spacing: 0.12em;
   text-align: left;
-  padding: 12px;
+  padding: 12px 14px;
   font-weight: 700;
   text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+
+th:first-child {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+th:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 
 td {
   border-top: 1px solid var(--line);
-  padding: 12px;
+  padding: 13px 14px;
   font-size: 12px;
+  vertical-align: middle;
 }
 
-td:first-child,
-th:first-child {
-  padding-left: 0;
+tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+tbody tr:hover {
+  background-color: #faf7f2;
 }
 
 .product-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .product-cell small {
   display: block;
   color: var(--muted);
+}
+
+.product-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: var(--ink);
+  transition: all var(--transition-fast);
+}
+
+.icon-btn:hover {
+  background: var(--light);
+  color: var(--accent);
+  border-color: rgba(166, 78, 61, 0.3);
+}
+
+.icon-btn.danger {
+  color: var(--muted);
+}
+
+.icon-btn.danger:hover {
+  background: var(--pill-low-bg);
+  color: var(--pill-low-text);
+  border-color: rgba(174, 68, 52, 0.3);
 }
 
 .form-grid {
@@ -846,6 +912,37 @@ th:first-child {
   font-size: 11px;
   font-weight: 700;
   margin-top: 15px;
+}
+
+/* Tile action buttons (edit/delete) */
+.tile-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: none;
+  gap: 5px;
+}
+
+div:hover > .tile-actions {
+  display: flex;
+}
+
+.category-tile.active-tile {
+  border-color: var(--accent);
+  background: var(--light);
+}
+
+/* Mobile sidebar backdrop */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 26, 21, 0.5);
+  z-index: 30;
+}
+
+.sidebar-backdrop.active {
+  display: block;
 }
 
 /* ==========================================================================
