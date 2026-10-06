@@ -1,13 +1,44 @@
-.app {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  text-align: center;
+/* ==========================================================================
+   AJ Clothing - App Shell & Layout Styles
+   ========================================================================== */
+
+.sidebar-backdrop {
+  display: none;
 }
 
-.app h1 {
-  font-size: 3.5rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+@media (max-width: 800px) {
+  .sidebar-backdrop.active {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 26, 21, 0.45);
+    z-index: 35;
+  }
+}
+
+.design-tokens-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.color-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
