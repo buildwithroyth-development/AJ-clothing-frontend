@@ -49,7 +49,6 @@ export default function StockPage() {
       p.name.toLowerCase().includes(q) ||
       (p.colour || '').toLowerCase().includes(q) ||
       (p.size || '').toLowerCase().includes(q) ||
-      (p.sku || '').toLowerCase().includes(q) ||
       (p.category_name || '').toLowerCase().includes(q)
     return matchCat && matchSearch
   })
@@ -79,11 +78,17 @@ export default function StockPage() {
   }
 
   const handleRestock = async (product, amount) => {
-    const newStock = product.stock + amount
-    const updated = await api.patch(`/products/${product.id}/`, { stock: newStock })
+    let updated
+    try {
+      updated = await api.post(`/products/${product.id}/restock/`, { amount })
+    } catch {
+      const newStock = product.stock + amount
+      updated = await api.patch(`/products/${product.id}/`, { stock: newStock })
+    }
     setProducts((ps) => ps.map((p) => (p.id === product.id ? updated : p)))
     setModal({ type: 'manage', data: updated })
-    flash(`Added ${amount} units to ${product.name}. Available stock is now ${newStock}.`)
+    flash(`Added ${amount} units to ${product.name}. Available stock is now ${updated.stock}.`)
+    return updated
   }
 
   return (
@@ -124,7 +129,7 @@ export default function StockPage() {
             <input
               id="stock-search"
               className="search-input"
-              placeholder="Search name, colour, size or SKU…"
+              placeholder="Search name, colour or size…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -185,7 +190,6 @@ export default function StockPage() {
                             <b style={{ display: 'block', fontSize: 13 }}>{p.name}</b>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
                               <small style={{ color: 'var(--muted)', fontSize: 11 }}>{p.category_name || 'Uncategorized'}</small>
-                              {p.sku && <span className="sku-badge">{p.sku}</span>}
                             </div>
                           </div>
                         </div>

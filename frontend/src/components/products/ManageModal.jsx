@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react'
-import { X, Pencil, Trash2 } from 'lucide-react'
+import { X, Pencil, Trash2, History, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { formatINR } from '../../utils/format'
+import api from '../../api/client'
 
 export default function ManageModal({ product, onEdit, onDelete, onRestock, onClose }) {
   const p = product
   const [restockQty, setRestockQty] = useState('')
   const [restocking, setRestocking] = useState(false)
   const [restockErr, setRestockErr] = useState('')
+  const [history, setHistory] = useState(() => {
+    // Check if initial product already has stock_history from API or localStorage
+    const local = localStorage.getItem(`aj-stock-history-${p.id}`)
+    if (local) {
+      try { return JSON.parse(local) } catch {}
+    }
+    return p.stock_history || []
+  })
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -15,6 +24,22 @@ export default function ManageModal({ product, onEdit, onDelete, onRestock, onCl
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
+
+  // Fetch latest stock history from backend if endpoint is available
+  useEffect(() => {
+    let cancelled = false
+    const fetchHistory = async () => {
+      try {
+        const res = await api.get(`/products/${p.id}/history/`).catch(() => null)
+        if (!cancelled && Array.isArray(res) && res.length > 0) {
+          setHistory(res)
+          localStorage.setItem(`aj-stock-history-${p.id}`, JSON.stringify(res))
+        }
+      } catch {}
+    }
+    fetchHistory()
+    return () => { cancelled = true }
+  }, [p.id])
 
   const handleRestock = async (e) => {
     e.preventDefault()
@@ -26,12 +51,38 @@ export default function ManageModal({ product, onEdit, onDelete, onRestock, onCl
     setRestocking(true)
     setRestockErr('')
     try {
-      await onRestock(p, qty)
+      const updated = await onRestock(p, qty)
+      const newEntry = {
+        id: Date.now(),
+        change: qty,
+        reason: 'Stock added (Restock)',
+        created_at: new Date().toISOString(),
+      }
+      setHistory((prev) => {
+        const next = [newEntry, ...(Array.isArray(prev) ? prev : [])]
+        localStorage.setItem(`aj-stock-history-${p.id}`, JSON.stringify(next))
+        return next
+      })
       setRestockQty('')
     } catch (err) {
       setRestockErr(err.message || 'Failed to update stock')
     }
     setRestocking(false)
+  }
+
+  const formatHistoryDate = (dateStr) => {
+    if (!dateStr) return 'Just now'
+    try {
+      const d = new Date(dateStr)
+      return d.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    } catch {
+      return dateStr
+    }
   }
 
   return (
@@ -71,13 +122,9 @@ export default function ManageModal({ product, onEdit, onDelete, onRestock, onCl
             <strong>{formatINR(p.price)}</strong>
           </div>
         </div>
-        {p.sku && (
-          <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--muted)' }}>Product SKU:</span>
-            <code className="sku-badge">{p.sku}</code>
-          </div>
-        )}
 
+
+        {/* Add Stock Section */}
         <form onSubmit={handleRestock} style={{ borderTop: '1px solid var(--line)', paddingTop: 16, marginTop: 14 }}>
           <label htmlFor="restock-qty" style={{ fontWeight: 600, color: 'var(--ink)' }}>
             Add stock (units received)
@@ -105,6 +152,46 @@ export default function ManageModal({ product, onEdit, onDelete, onRestock, onCl
           </div>
           {restockErr && <p style={{ color: 'var(--accent)', fontSize: 11, margin: '6px 0 0' }}>{restockErr}</p>}
         </form>
+
+        {/* Stock History Section */}
+        <div style={{ borderTop: '1px solid var(--line)', paddingTop: 18, marginTop: 18 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <h3 style={{ margin: 0, fontFamily: 'Playfair Display, Georgia, serif', fontSize: 17, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <History size={16} strokeWidth={2} style={{ color: 'var(--accent)' }} />
+              Stock history
+            </h3>
+            <span className="muted" style={{ fontSize: 11 }}>
+              {history.length} {history.length === 1 ? 'record' : 'records'}
+            </span>
+          </div>
+
+          {history && history.length > 0 ? (
+            <div style={{ display: 'grid', gap: 7, maxHeight: 190, overflowY: 'auto', paddingRight: 2 }}>
+              {history.map((m, idx) => (
+                <div key={m.id || idx} className="history-item">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {m.change > 0 ? (
+                      <ArrowDownLeft size={14} style={{ color: 'var(--green)', flexShrink: 0 }} />
+                    ) : (
+                      <ArrowUpRight size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                    )}
+                    <div>
+                      <strong style={{ display: 'block', fontSize: 12 }}>{m.reason || 'Stock movement'}</strong>
+                      <small>{formatHistoryDate(m.created_at || m.at)}</small>
+                    </div>
+                  </div>
+                  <span className={`history-pill ${m.change > 0 ? 'positive' : 'negative'}`}>
+                    {m.change > 0 ? `+${m.change}` : m.change} units
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty" style={{ padding: '14px 10px', textAlign: 'center', background: 'var(--bg)', borderRadius: 8 }}>
+              <small className="muted">No stock movements recorded yet. Changes will appear here as stock is adjusted or billed.</small>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

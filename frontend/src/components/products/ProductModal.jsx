@@ -5,7 +5,7 @@ import api from '../../api/client'
 export default function ProductModal({ initial, categories, onSave, onClose }) {
   const blank = {
     name: '', category: '', colour: '', size: '',
-    price: '', stock: '', sku: '', description: '', is_active: true,
+    price: '', stock: '', description: '', is_active: true,
   }
   const [form, setForm]     = useState({ ...blank, ...initial })
   const [saving, setSaving] = useState(false)
@@ -23,16 +23,42 @@ export default function ProductModal({ initial, categories, onSave, onClose }) {
 
   const submit = async (e) => {
     e.preventDefault()
-    if (!form.name.trim()) { setErr('Product name is required.'); return }
+
+    // Enforce required fields: Product Name, Category, Colour, Size, Selling Price
+    if (!form.name?.trim()) {
+      setErr('Product name is required.')
+      return
+    }
+    if (!form.category?.trim()) {
+      setErr('Category is required.')
+      return
+    }
+    if (!form.colour?.trim()) {
+      setErr('Colour is required.')
+      return
+    }
+    if (!form.size?.trim()) {
+      setErr('Size is required.')
+      return
+    }
+    if (form.price === '' || isNaN(form.price) || Number(form.price) < 0) {
+      setErr('Selling price is required and must be a valid amount.')
+      return
+    }
+
     setSaving(true)
     setErr('')
+
     const payload = {
       ...form,
-      category: form.category?.trim() || null,
-      sku: form.sku?.trim() || null,
+      name: form.name.trim(),
+      category: form.category.trim(),
+      colour: form.colour.trim(),
+      size: form.size.trim(),
       price: parseFloat(form.price) || 0,
-      stock: parseInt(form.stock, 10) || 0,
+      stock: form.stock !== '' ? parseInt(form.stock, 10) || 0 : 0,
     }
+
     try {
       const result = initial?.id
         ? await api.patch(`/products/${initial.id}/`, payload)
@@ -63,17 +89,28 @@ export default function ProductModal({ initial, categories, onSave, onClose }) {
 
         <div className="form-grid">
           <div>
-            <label htmlFor="p-name">Product name</label>
-            <input id="p-name" value={form.name} onChange={set('name')} placeholder="e.g. Linen Shirt" required />
+            <label htmlFor="p-name">
+              Product name <span style={{ color: 'var(--accent)', fontWeight: 700 }}>*</span>
+            </label>
+            <input
+              id="p-name"
+              value={form.name}
+              onChange={set('name')}
+              placeholder="e.g. Linen Shirt"
+              required
+            />
           </div>
           <div>
-            <label htmlFor="p-category">Category</label>
+            <label htmlFor="p-category">
+              Category <span style={{ color: 'var(--accent)', fontWeight: 700 }}>*</span>
+            </label>
             <input
               id="p-category"
               list="category-list"
               value={form.category}
               onChange={set('category')}
               placeholder="e.g. Shirts"
+              required
             />
             <datalist id="category-list">
               {catOptions.map((c) => (
@@ -82,29 +119,63 @@ export default function ProductModal({ initial, categories, onSave, onClose }) {
             </datalist>
           </div>
           <div>
-            <label htmlFor="p-colour">Colour</label>
-            <input id="p-colour" value={form.colour} onChange={set('colour')} placeholder="e.g. White" />
+            <label htmlFor="p-colour">
+              Colour <span style={{ color: 'var(--accent)', fontWeight: 700 }}>*</span>
+            </label>
+            <input
+              id="p-colour"
+              value={form.colour}
+              onChange={set('colour')}
+              placeholder="e.g. White"
+              required
+            />
           </div>
           <div>
-            <label htmlFor="p-size">Size</label>
-            <input id="p-size" value={form.size} onChange={set('size')} placeholder="e.g. M" />
+            <label htmlFor="p-size">
+              Size <span style={{ color: 'var(--accent)', fontWeight: 700 }}>*</span>
+            </label>
+            <input
+              id="p-size"
+              value={form.size}
+              onChange={set('size')}
+              placeholder="e.g. M"
+              required
+            />
           </div>
           <div>
-            <label htmlFor="p-price">Selling price (₹)</label>
-            <input id="p-price" type="number" min="0" step="0.01" value={form.price} onChange={set('price')} placeholder="0.00" />
+            <label htmlFor="p-price">
+              Selling price (₹) <span style={{ color: 'var(--accent)', fontWeight: 700 }}>*</span>
+            </label>
+            <input
+              id="p-price"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.price}
+              onChange={set('price')}
+              placeholder="0.00"
+              required
+            />
           </div>
           <div>
-            <label htmlFor="p-stock">{initial?.id ? 'Available stock' : 'Initial stock'}</label>
-            <input id="p-stock" type="number" min="0" step="1" value={form.stock} onChange={set('stock')} placeholder="0" />
-          </div>
-          <div className="wide">
-            <label htmlFor="p-sku">SKU <span className="muted" style={{ fontWeight: 400 }}>· optional</span></label>
-            <input id="p-sku" value={form.sku} onChange={set('sku')} placeholder="e.g. SHT-001-WHT-M" />
+            <label htmlFor="p-stock">
+              {initial?.id ? 'Available stock' : 'Initial stock'}{' '}
+              <span className="muted" style={{ fontWeight: 400 }}>· optional</span>
+            </label>
+            <input
+              id="p-stock"
+              type="number"
+              min="0"
+              step="1"
+              value={form.stock}
+              onChange={set('stock')}
+              placeholder="0"
+            />
           </div>
         </div>
 
-        <p className="muted" style={{ fontSize: 11, marginTop: 10 }}>
-          Each colour and size is tracked separately.
+        <p className="muted" style={{ fontSize: 11, marginTop: 12 }}>
+          Fields marked with <span style={{ color: 'var(--accent)', fontWeight: 700 }}>*</span> are required. Each colour and size is tracked separately.
         </p>
 
         <button type="submit" className="btn primary full" disabled={saving} style={{ marginTop: 8 }}>

@@ -116,19 +116,6 @@
   color: #ffffff;
 }
 
-/* SKU Badge */
-.sku-badge {
-  display: inline-block;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  background: #f3efe8;
-  color: #6a5e52;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #e2ddd3;
-}
 
 /* Size Badge Highlight */
 .size-badge {
@@ -189,4 +176,38 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Stock History List */
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.history-item small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.history-pill {
+  font-weight: 700;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.history-pill.positive {
+  background: #e9f4ed;
+  color: #297457;
+}
+
+.history-pill.negative {
+  background: #fbe7e1;
+  color: #ae4434;
 }
