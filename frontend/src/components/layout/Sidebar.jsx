@@ -1,3 +1,5 @@
+import logoImg from '../../assets/AJ_logo.png'
+
 export default function Sidebar({ navItems, activePage, setActivePage, mobileNavOpen, setMobileNavOpen }) {
   return (
     <>
@@ -9,7 +11,9 @@ export default function Sidebar({ navItems, activePage, setActivePage, mobileNav
 
       <aside className={`side ${mobileNavOpen ? 'open' : ''}`} id="side">
         <div className="brand">
-          <div className="mark">AJ</div>
+          <div className="mark">
+            <img src={logoImg} alt="AJ Clothing Logo" className="brand-logo-img" />
+          </div>
           <div><b>AJ Clothing</b><small>STORE DESK</small></div>
         </div>
         <div className="nav-label">WORKSPACE</div>

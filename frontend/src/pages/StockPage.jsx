@@ -266,6 +266,8 @@ export default function StockPage() {
       {modal?.type === 'add' && (
         <ProductModal
           categories={categories}
+          existingProducts={products}
+          onRestock={handleRestock}
           onSave={handleSave}
           onClose={() => setModal(null)}
         />
@@ -277,6 +279,8 @@ export default function StockPage() {
             category: modal.data.category_name || '',
           }}
           categories={categories}
+          existingProducts={products}
+          onRestock={handleRestock}
           onSave={handleSave}
           onClose={() => setModal(null)}
         />

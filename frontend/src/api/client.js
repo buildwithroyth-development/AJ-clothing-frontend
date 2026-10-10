@@ -1,3 +1,5 @@
+import firebaseApi from './firebase'
+
 const API_BASE =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD
@@ -25,11 +27,12 @@ export const apiFetch = async (path, opts = {}) => {
   return data
 }
 
+// Delegated to Firebase Realtime Database adapter
 export const api = {
-  get:    (path)        => apiFetch(path),
-  post:   (path, body)  => apiFetch(path, { method: 'POST',  body: JSON.stringify(body) }),
-  patch:  (path, body)  => apiFetch(path, { method: 'PATCH', body: JSON.stringify(body) }),
-  delete: (path)        => apiFetch(path, { method: 'DELETE' }),
+  get:    (path)        => firebaseApi.get(path),
+  post:   (path, body)  => firebaseApi.post(path, body),
+  patch:  (path, body)  => firebaseApi.patch(path, body),
+  delete: (path)        => firebaseApi.delete(path),
 }
 
 export default api
