@@ -1,64 +1,6 @@
 {
   "rules": {
     ".read": false,
-    ".write": false,
-
-    "staff": {
-      ".read": "auth != null && root.child('staff').child(auth.uid).val() === true",
-      ".write": false
-    },
-
-    "products": {
-      ".read": "auth != null && root.child('staff').child(auth.uid).val() === true",
-      "$productId": {
-        ".write": "auth != null && root.child('staff').child(auth.uid).val() === true",
-        ".validate": "newData.hasChildren(['name', 'price', 'stock'])",
-        "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200" },
-        "price": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-        "stock": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() % 1 === 0" },
-        "colour": { ".validate": "newData.isString() && newData.val().length <= 80" },
-        "size": { ".validate": "newData.isString() && newData.val().length <= 30" },
-        "$other": { ".validate": true }
-      }
-    },
-
-    "categories": {
-      ".read": "auth != null && root.child('staff').child(auth.uid).val() === true",
-      ".write": "auth != null && root.child('staff').child(auth.uid).val() === true"
-    },
-
-    "stock_movements": {
-      ".read": "auth != null && root.child('staff').child(auth.uid).val() === true",
-      "$productId": {
-        "$movementId": {
-          ".write": "auth != null && root.child('staff').child(auth.uid).val() === true && !data.exists() && newData.exists()",
-          ".validate": "newData.hasChildren(['change', 'reason', 'created_at'])",
-          "change": { ".validate": "newData.isNumber() && newData.val() % 1 === 0" },
-          "reason": { ".validate": "newData.isString() && newData.val().length <= 255" },
-          "$other": { ".validate": true }
-        }
-      }
-    },
-
-    "sales": {
-      ".read": "auth != null && root.child('staff').child(auth.uid).val() === true",
-      "$saleId": {
-        ".write": "auth != null && root.child('staff').child(auth.uid).val() === true && !data.exists() && newData.exists()",
-        ".validate": "newData.hasChildren(['bill_number', 'items', 'total', 'created_at'])",
-        "bill_number": { ".validate": "newData.isString() && newData.val().length <= 50" },
-        "total": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-        "subtotal": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-        "discount_percent": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
-        "$other": { ".validate": true }
-      }
-    },
-
-    "counters": {
-      "bills": {
-        ".read": "auth != null && root.child('staff').child(auth.uid).val() === true",
-        ".write": "auth != null && root.child('staff').child(auth.uid).val() === true && newData.exists()",
-        ".validate": "newData.isNumber() && newData.val() % 1 === 0 && (!data.exists() || newData.val() >= data.val())"
-      }
-    }
+    ".write": false
   }
 }
