@@ -15,24 +15,11 @@ import api from '../api/client'
 import { formatINR } from '../utils/format'
 import VariantPickerModal from '../components/billing/VariantPickerModal'
 import ReceiptModal from '../components/billing/ReceiptModal'
+import { getVectorCategoryIcon } from '../components/common/ClothingIcons'
 
 // Dynamic category helper
 const getProductCategory = (p) => {
   return (p.category_name || p.category || 'Uncategorized').trim()
-}
-
-// Contextual category icons based on category name
-const getCategoryIcon = (category = '') => {
-  const c = category.toLowerCase()
-  if (/shirt/.test(c) && !/t[ -]?shirt/.test(c)) return '👔'
-  if (/pant|trouser|bottom|jeans|denim|chinos|jogger/.test(c)) return '👖'
-  if (/kurta|kurtha|saree|ethnic|traditional/.test(c)) return '🥻'
-  if (/tee|t[ -]?shirt|top/.test(c)) return '👕'
-  if (/dress|frock|gown|skirt/.test(c)) return '👗'
-  if (/jacket|coat|hoodie|winter|sweater|blazer/.test(c)) return '🧥'
-  if (/shoe|footwear|sandal|sneaker|heel/.test(c)) return '👟'
-  if (/accessori|cap|hat|belt|wallet|tie|bag/.test(c)) return '🧢'
-  return '🛍️'
 }
 
 const money = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
@@ -398,7 +385,7 @@ export default function BillingPage() {
                       onClick={() => setPickerCategory(group)}
                     >
                       <span className="tile-icon" aria-hidden="true">
-                        {getCategoryIcon(group)}
+                        {getVectorCategoryIcon(group, { size: 24, strokeWidth: 1.8 })}
                       </span>
                       <b>{group}</b>
                       <small>

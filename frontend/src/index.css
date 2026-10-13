@@ -943,9 +943,22 @@ tbody tr:hover {
 }
 
 .category-tile .tile-icon {
-  display: block;
-  font-size: 32px;
-  margin-bottom: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--light);
+  color: var(--accent);
+  margin-bottom: 14px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.category-tile:hover .tile-icon {
+  background: var(--accent);
+  color: #ffffff;
+  transform: scale(1.06);
 }
 
 .category-tile b {
