@@ -15,7 +15,7 @@ import api from '../api/client'
 import { formatINR } from '../utils/format'
 import VariantPickerModal from '../components/billing/VariantPickerModal'
 import ReceiptModal from '../components/billing/ReceiptModal'
-import { getVectorCategoryIcon } from '../components/common/ClothingIcons'
+import ProductIllustration from '../components/common/ProductIllustration'
 
 // Dynamic category helper
 const getProductCategory = (p) => {
@@ -383,10 +383,14 @@ export default function BillingPage() {
                       type="button"
                       className="category-tile"
                       onClick={() => setPickerCategory(group)}
+                      title={`Browse ${group} collection`}
                     >
-                      <span className="tile-icon" aria-hidden="true">
-                        {getVectorCategoryIcon(group, { size: 24, strokeWidth: 1.8 })}
-                      </span>
+                      <ProductIllustration
+                        category={group}
+                        size={88}
+                        svgSize={72}
+                        className="tile-illustration"
+                      />
                       <b>{group}</b>
                       <small>
                         {modelsCount} {modelsCount === 1 ? 'model' : 'models'} · {variantsCount}{' '}

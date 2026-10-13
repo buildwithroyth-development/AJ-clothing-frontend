@@ -18,7 +18,7 @@ const friendlyError = (err) => {
   }
 }
 
-export default function LoginPage() {
+export default function LoginPage({ onDevBypass }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -102,6 +102,22 @@ export default function LoginPage() {
         >
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
+
+        {onDevBypass && (
+          <div style={{ marginTop: 16, textAlign: 'center' }}>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
+              — or local development —
+            </div>
+            <button
+              type="button"
+              className="btn full"
+              onClick={onDevBypass}
+              style={{ background: '#f5f0e6', borderColor: 'var(--line)', fontSize: 13, color: 'var(--ink)' }}
+            >
+              Continue without Sign In (Dev Mode)
+            </button>
+          </div>
+        )}
       </form>
     </div>
   )

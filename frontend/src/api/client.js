@@ -22,7 +22,12 @@ const errorMessage = (data, status) => {
 }
 
 const request = async (method, path, body) => {
-  const token = await getIdToken()
+  let token = 'dev-token'
+  try {
+    token = await getIdToken()
+  } catch {
+    // In dev mode when not signed in, fall back to dev token
+  }
   let res
   try {
     res = await fetch(`${API_BASE}${path}`, {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Search } from 'lucide-react'
 import { formatINR } from '../../utils/format'
-import { getVectorCategoryIcon } from '../common/ClothingIcons'
+import ProductIllustration from '../common/ProductIllustration'
 
 export default function VariantPickerModal({
   category,
@@ -65,21 +65,13 @@ export default function VariantPickerModal({
               <X size={20} />
             </button>
           </div>
-          <h2 id="picker-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 34,
-                height: 34,
-                borderRadius: 8,
-                background: 'var(--light)',
-                color: 'var(--accent)',
-              }}
-            >
-              {getVectorCategoryIcon(category, { size: 20, strokeWidth: 1.8 })}
-            </span>
+          <h2 id="picker-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <ProductIllustration
+              category={category}
+              size={44}
+              svgSize={36}
+              style={{ borderRadius: 10, flexShrink: 0 }}
+            />
             {category} collection
           </h2>
           <p>Select the exact colour and size. Add multiple items, then review your bill.</p>

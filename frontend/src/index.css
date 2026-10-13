@@ -922,24 +922,44 @@ tbody tr:hover {
 .category-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
   margin-top: 20px;
 }
 
 .category-tile {
-  background: #faf8f4;
+  background: #ffffff;
   border: 1px solid var(--line);
-  border-radius: 13px;
-  padding: 22px 12px;
-  text-align: left;
-  min-height: 158px;
-  transition: var(--transition-fast);
+  border-radius: 14px;
+  padding: 24px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 240px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  width: 100%;
 }
 
 .category-tile:hover {
   border-color: var(--accent);
-  background: var(--light);
+  background: #ffffff;
   transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(43, 38, 33, 0.06);
+}
+
+.category-tile .tile-illustration,
+.category-tile .product-illustration-box {
+  margin-bottom: 14px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.category-tile:hover .tile-illustration,
+.category-tile:hover .product-illustration-box {
+  background: #ebe3d6;
+  border-color: rgba(166, 78, 61, 0.3);
+  transform: translateY(-2px) scale(1.02);
 }
 
 .category-tile .tile-icon {
@@ -964,22 +984,33 @@ tbody tr:hover {
 .category-tile b {
   display: block;
   font-size: 16px;
+  font-family: 'Playfair Display', Georgia, serif;
   color: var(--ink);
+  letter-spacing: -0.01em;
 }
 
 .category-tile small {
   display: block;
   color: var(--muted);
-  margin-top: 7px;
+  margin-top: 6px;
   line-height: 1.5;
+  font-size: 12px;
 }
 
 .category-tile .tile-link {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--accent);
   font-size: 11px;
   font-weight: 700;
-  margin-top: 15px;
+  margin-top: auto;
+  padding-top: 14px;
+  transition: transform 0.2s ease;
+}
+
+.category-tile:hover .tile-link {
+  transform: translateX(3px);
 }
 
 /* Tile action buttons (edit/delete) */
