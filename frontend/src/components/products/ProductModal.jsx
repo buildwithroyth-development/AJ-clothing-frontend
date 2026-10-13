@@ -27,20 +27,27 @@ export default function ProductModal({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
-  // Check for duplicate variant (same name, colour, and size)
-  const findDuplicate = (currentName, currentColour, currentSize) => {
-    const name = (currentName || '').trim().toLowerCase()
-    const colour = (currentColour || '').trim().toLowerCase()
-    const size = (currentSize || '').trim().toLowerCase()
+  // A product already exists only when ALL of these match:
+  // name, category, colour, size and selling price.
+  const norm = (v) => (v || '').toString().trim().toLowerCase()
+  const findDuplicate = (f) => {
+    const name = norm(f.name)
+    const category = norm(f.category)
+    const colour = norm(f.colour)
+    const size = norm(f.size)
+    const priceText = (f.price ?? '').toString().trim()
+    const price = Number(priceText)
 
-    if (!name || !colour || !size) return null
+    if (!name || !category || !colour || !size || priceText === '' || Number.isNaN(price)) return null
 
     return existingProducts.find((p) => {
       if (initial?.id && String(p.id) === String(initial.id)) return false
       return (
-        (p.name || '').trim().toLowerCase() === name &&
-        (p.colour || '').trim().toLowerCase() === colour &&
-        (p.size || '').trim().toLowerCase() === size
+        norm(p.name) === name &&
+        norm(p.category_name || p.category) === category &&
+        norm(p.colour) === colour &&
+        norm(p.size) === size &&
+        Math.abs(Number(p.price) - price) < 0.005
       )
     })
   }
@@ -50,10 +57,10 @@ export default function ProductModal({
     setForm((f) => {
       const updated = { ...f, [k]: val }
       // Live check for existing product variant
-      const match = findDuplicate(updated.name, updated.colour, updated.size)
+      const match = findDuplicate(updated)
       setExistingMatch(match || null)
       if (match) {
-        setErr(`This product already exists with the same colour and size (Current stock: ${match.stock} units).`)
+        setErr(`This product already exists with the same category, colour, size and price (Current stock: ${match.stock} units).`)
       } else {
         setErr('')
       }
@@ -106,11 +113,11 @@ export default function ProductModal({
     }
 
     // Check duplicate
-    const duplicate = findDuplicate(form.name, form.colour, form.size)
+    const duplicate = findDuplicate(form)
     if (duplicate) {
       setExistingMatch(duplicate)
       setErr(
-        `This product already exists with the same colour and size (Current stock: ${duplicate.stock} units). You can update the existing stock above or choose a different size/colour.`
+        `This product already exists with the same category, colour, size and price (Current stock: ${duplicate.stock} units). You can add to the existing stock above or change any of these details to create a new product.`
       )
       return
     }
@@ -175,7 +182,7 @@ export default function ProductModal({
               <strong style={{ color: '#9f3c31' }}>This product variant already exists!</strong>
             </div>
             <p style={{ margin: 0, fontSize: 12, color: '#4a2824' }}>
-              <strong>{existingMatch.name}</strong> ({existingMatch.colour} · Size {existingMatch.size}) already exists with <strong>{existingMatch.stock} units</strong> in stock.
+              <strong>{existingMatch.name}</strong> ({existingMatch.category_name || existingMatch.category} · {existingMatch.colour} · Size {existingMatch.size} · ₹{existingMatch.price}) already exists with <strong>{existingMatch.stock} units</strong> in stock.
             </p>
             {onRestock && (
               <div style={{ marginTop: 4 }}>
