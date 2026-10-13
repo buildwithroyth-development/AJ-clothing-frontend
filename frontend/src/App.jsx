@@ -27,6 +27,8 @@ export default function App({
   metrics = { todaySales: 0, soldToday: 0, totalStock: 0, totalProducts: 0 },
   lowStockItems = [],
   movements = [],
+  userEmail = '',
+  onSignOut,
 }) {
   const [activePage, setActivePage] = useState('dashboard')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -72,6 +74,8 @@ export default function App({
           activePage={activePage}
           mobileNavOpen={mobileNavOpen}
           setMobileNavOpen={setMobileNavOpen}
+          userEmail={userEmail}
+          onSignOut={onSignOut}
         />
 
         <main className="page">

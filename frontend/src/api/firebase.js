@@ -6,14 +6,20 @@ import {
   set,
   update,
   remove,
-  query,
-  orderByChild,
-  equalTo,
+  push,
+  runTransaction,
 } from 'firebase/database'
-import { getAuth, signInAnonymously } from 'firebase/auth'
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut as fbSignOut,
+} from 'firebase/auth'
 
 // Firebase Web Configuration
-// Can be customized via Vite environment variables or defaults to project AJ-Clothing
+// Can be customized via Vite environment variables or defaults to project AJ-Clothing.
+// (These web config values are public identifiers, not secrets. Access is
+// controlled by database.rules.json and Firebase Authentication.)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyBtxKPU9eunb5rLaEH-anSPzpZZysWqBKI',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'aj-clothing-e8477.firebaseapp.com',
@@ -31,119 +37,111 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 export const db = getDatabase(app)
 export const auth = getAuth(app)
 
-// Initial sample catalogue for instant seeding if RTDB is empty
-const INITIAL_PRODUCTS = [
-  { id: 1, name: 'Everyday Tee', category_name: 'Tops', colour: 'Ivory', size: 'M', price: 799, stock: 15 },
-  { id: 2, name: 'Everyday Tee', category_name: 'Tops', colour: 'Cocoa', size: 'L', price: 799, stock: 9 },
-  { id: 3, name: 'Relaxed Denim', category_name: 'Bottoms', colour: 'Indigo', size: '32', price: 1499, stock: 8 },
-  { id: 4, name: 'Linen Shirt', category_name: 'Shirts', colour: 'White', size: 'M', price: 1199, stock: 4 },
-  { id: 5, name: 'Classic Kurta', category_name: 'Ethnic', colour: 'Maroon', size: 'L', price: 1299, stock: 7 },
-  { id: 6, name: 'Festive Saree', category_name: 'Ethnic', colour: 'Gold', size: 'Free', price: 2499, stock: 13 },
-  { id: 7, name: 'Oxford Shirt', category_name: 'Shirts', colour: 'Sky Blue', size: 'L', price: 1399, stock: 12 },
-  { id: 8, name: 'Checked Shirt', category_name: 'Shirts', colour: 'Red', size: 'XL', price: 999, stock: 10 },
-  { id: 9, name: 'Denim Shirt', category_name: 'Shirts', colour: 'Indigo', size: 'M', price: 1599, stock: 8 },
-  { id: 10, name: 'Formal Shirt', category_name: 'Shirts', colour: 'Black', size: 'S', price: 1299, stock: 16 },
-  { id: 11, name: 'Slim Fit Chino Pant', category_name: 'Bottoms', colour: 'Beige', size: '30', price: 1399, stock: 14 },
-  { id: 12, name: 'Formal Trouser', category_name: 'Bottoms', colour: 'Charcoal', size: '34', price: 1699, stock: 10 },
-  { id: 13, name: 'Cargo Pant', category_name: 'Bottoms', colour: 'Olive', size: '32', price: 1799, stock: 9 },
-  { id: 14, name: 'Cotton Jogger Pant', category_name: 'Bottoms', colour: 'Black', size: '36', price: 1099, stock: 18 },
-  { id: 15, name: 'Cotton Kurta', category_name: 'Ethnic', colour: 'Cream', size: 'M', price: 999, stock: 15 },
-  { id: 16, name: 'Printed Kurta', category_name: 'Ethnic', colour: 'Blue', size: 'XL', price: 1499, stock: 11 },
-  { id: 17, name: 'Festive Silk Kurta', category_name: 'Ethnic', colour: 'Mustard', size: 'L', price: 2299, stock: 6 },
-  { id: 18, name: 'Short Kurta', category_name: 'Ethnic', colour: 'Green', size: 'S', price: 1199, stock: 13 },
-  { id: 19, name: 'Cotton Saree', category_name: 'Ethnic', colour: 'Pink', size: 'Free', price: 1299, stock: 12 },
-  { id: 20, name: 'Silk Saree', category_name: 'Ethnic', colour: 'Royal Blue', size: 'Free', price: 3499, stock: 7 },
-  { id: 21, name: 'Printed Saree', category_name: 'Ethnic', colour: 'Green', size: 'Free', price: 1599, stock: 16 },
-  { id: 22, name: 'Chiffon Saree', category_name: 'Ethnic', colour: 'Peach', size: 'Free', price: 1999, stock: 10 },
-  { id: 23, name: 'Polo T-shirt', category_name: 'Tops', colour: 'Navy', size: 'L', price: 899, stock: 20 },
-  { id: 24, name: 'Graphic Tee', category_name: 'Tops', colour: 'White', size: 'M', price: 699, stock: 18 },
-  { id: 25, name: 'Oversized Tee', category_name: 'Tops', colour: 'Black', size: 'XL', price: 999, stock: 12 },
-  { id: 26, name: 'Striped Tee', category_name: 'Tops', colour: 'Grey', size: 'S', price: 749, stock: 15 },
-]
+// ---------------------------------------------------------------------------
+// Authentication (staff email + password)
+// ---------------------------------------------------------------------------
+export const signIn = (email, password) =>
+  signInWithEmailAndPassword(auth, email.trim(), password)
+export const signOut = () => fbSignOut(auth)
+export const onUserChange = (cb) => onAuthStateChanged(auth, cb)
 
-// Ensure authenticated session if required by security rules
-let authPromise = null
-export const ensureAuth = async () => {
-  if (auth.currentUser) return auth.currentUser
-  if (!authPromise) {
-    authPromise = signInAnonymously(auth).catch((err) => {
-      console.warn('Anonymous sign-in note:', err?.message || err)
-      return null
-    })
-  }
-  return authPromise
+const requireAuth = () => {
+  if (!auth.currentUser) throw new Error('Please sign in to continue.')
 }
 
-// Ensure database is populated with initial catalogue if completely empty
-let seedPromise = null
-const ensureSeeded = async () => {
-  if (seedPromise) return seedPromise
-  seedPromise = (async () => {
-    try {
-      const snap = await get(ref(db, 'products'))
-      if (!snap.exists() || snap.val() === null) {
-        const productMap = {}
-        const categorySet = new Set()
-        INITIAL_PRODUCTS.forEach((p) => {
-          productMap[p.id] = {
-            ...p,
-            category: p.category_name,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_active: true,
-          }
-          if (p.category_name) categorySet.add(p.category_name)
-        })
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+const toList = (val) => {
+  if (!val) return []
+  return (Array.isArray(val) ? val : Object.values(val)).filter(Boolean)
+}
+const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
+const nowIso = () => new Date().toISOString()
+const cleanPath = (path) => path.replace(/^\/api\/v1/, '').replace(/^\/|\/$/g, '')
 
-        const categoryList = Array.from(categorySet).map((name, idx) => ({
-          id: idx + 1,
-          name,
-        }))
+// Add a category by name if it does not exist yet (case-insensitive).
+const ensureCategory = async (name) => {
+  const clean = (name || '').trim()
+  if (!clean) return
+  const snap = await get(ref(db, 'categories'))
+  const exists = toList(snap.val()).some(
+    (c) => (c.name || '').trim().toLowerCase() === clean.toLowerCase()
+  )
+  if (!exists) {
+    const id = Date.now()
+    await set(ref(db, `categories/${id}`), { id, name: clean })
+  }
+}
 
-        await Promise.all([
-          set(ref(db, 'products'), productMap),
-          set(ref(db, 'categories'), categoryList),
-        ])
-      }
-    } catch (err) {
-      console.warn('Seeding check note:', err?.message || err)
+// Apply a stock change to one product inside a transaction.
+// Returns { ok, reason, product } — never lets stock go below zero.
+const adjustStock = async (productId, delta) => {
+  let reason = null
+  const result = await runTransaction(ref(db, `products/${productId}`), (cur) => {
+    reason = null
+    if (cur === null) {
+      // First run may see an empty local cache; commit nothing and re-check below.
+      reason = 'missing'
+      return cur
     }
-  })()
-  return seedPromise
+    const next = (Number(cur.stock) || 0) + delta
+    if (next < 0) {
+      reason = 'insufficient'
+      return undefined // abort
+    }
+    return { ...cur, stock: next, updated_at: nowIso() }
+  })
+  const product = result.snapshot.val()
+  if (!result.committed && reason === 'insufficient') return { ok: false, reason, product }
+  if (product === null) return { ok: false, reason: 'missing', product: null }
+  return { ok: result.committed, reason: result.committed ? null : 'aborted', product }
+}
+
+const logMovement = (productId, productName, change, reason, extra = {}) => {
+  const moveId = push(ref(db, `stock_movements/${productId}`)).key
+  return {
+    path: `stock_movements/${productId}/${moveId}`,
+    value: {
+      id: moveId,
+      product: Number.isNaN(Number(productId)) ? productId : Number(productId),
+      product_name: productName,
+      change,
+      reason,
+      created_at: nowIso(),
+      ...extra,
+    },
+  }
 }
 
 export const firebaseApi = {
   get: async (path) => {
-    await ensureAuth()
-    await ensureSeeded()
-
-    const clean = path.replace(/^\/api\/v1/, '').replace(/^\/|\/$/g, '')
+    requireAuth()
+    const clean = cleanPath(path)
 
     // GET /products/
     if (clean === 'products') {
       const snap = await get(ref(db, 'products'))
-      if (!snap.exists()) return []
-      const val = snap.val()
-      if (Array.isArray(val)) return val.filter(Boolean)
-      return Object.values(val || {})
+      return toList(snap.val())
     }
 
     // GET /categories/
     if (clean === 'categories') {
       const snap = await get(ref(db, 'categories'))
-      if (!snap.exists()) return []
-      const val = snap.val()
-      if (Array.isArray(val)) return val.filter(Boolean)
-      return Object.values(val || {})
+      const list = toList(snap.val())
+      if (list.length > 0) return list
+      // Fall back to the category names used by products
+      const prods = toList((await get(ref(db, 'products'))).val())
+      const names = [...new Set(prods.map((p) => p.category_name || p.category).filter(Boolean))]
+      return names.map((name, idx) => ({ id: idx + 1, name }))
     }
 
-    // GET /sales or /sales/ or /bills
+    // GET /sales or /bills
     if (clean === 'sales' || clean === 'bills') {
       const snap = await get(ref(db, 'sales'))
-      if (!snap.exists()) return []
-      const val = snap.val()
-      const list = Array.isArray(val) ? val.filter(Boolean) : Object.values(val || {})
-      return list.sort((a, b) => new Date(b.created_at || b.at || 0) - new Date(a.created_at || a.at || 0))
+      return toList(snap.val()).sort(
+        (a, b) => new Date(b.created_at || b.at || 0) - new Date(a.created_at || a.at || 0)
+      )
     }
 
     // GET /stock_movements or /movements
@@ -164,7 +162,9 @@ export const firebaseApi = {
               list.push({
                 ...m,
                 productName: m.product_name || matchedProd?.name || 'Product',
-                time: m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+                time: m.created_at
+                  ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : 'Today',
               })
             }
           })
@@ -176,19 +176,14 @@ export const firebaseApi = {
     // GET /products/:id/history/
     const historyMatch = clean.match(/^products\/([^/]+)\/history$/)
     if (historyMatch) {
-      const prodId = historyMatch[1]
-      const snap = await get(ref(db, `stock_movements/${prodId}`))
-      if (!snap.exists()) return []
-      const val = snap.val()
-      const list = Array.isArray(val) ? val.filter(Boolean) : Object.values(val || {})
-      return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      const snap = await get(ref(db, `stock_movements/${historyMatch[1]}`))
+      return toList(snap.val()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     }
 
     // GET /products/:id/
     const prodMatch = clean.match(/^products\/([^/]+)$/)
     if (prodMatch) {
-      const prodId = prodMatch[1]
-      const snap = await get(ref(db, `products/${prodId}`))
+      const snap = await get(ref(db, `products/${prodMatch[1]}`))
       return snap.exists() ? snap.val() : null
     }
 
@@ -198,28 +193,23 @@ export const firebaseApi = {
   },
 
   post: async (path, body = {}) => {
-    await ensureAuth()
-    await ensureSeeded()
-
-    const clean = path.replace(/^\/api\/v1/, '').replace(/^\/|\/$/g, '')
+    requireAuth()
+    const clean = cleanPath(path)
 
     // POST /products/
     if (clean === 'products') {
-      const snap = await get(ref(db, 'products'))
-      const allProducts = snap.exists()
-        ? (Array.isArray(snap.val()) ? snap.val().filter(Boolean) : Object.values(snap.val() || {}))
-        : []
+      const allProducts = toList((await get(ref(db, 'products'))).val())
 
       const name = (body.name || '').trim().toLowerCase()
       const colour = (body.colour || '').trim().toLowerCase()
       const size = (body.size || '').trim().toLowerCase()
 
-      const duplicate = allProducts.find((p) =>
-        (p.name || '').trim().toLowerCase() === name &&
-        (p.colour || '').trim().toLowerCase() === colour &&
-        (p.size || '').trim().toLowerCase() === size
+      const duplicate = allProducts.find(
+        (p) =>
+          (p.name || '').trim().toLowerCase() === name &&
+          (p.colour || '').trim().toLowerCase() === colour &&
+          (p.size || '').trim().toLowerCase() === size
       )
-
       if (duplicate) {
         throw new Error(
           `Product "${body.name}" with colour "${body.colour}" and size "${body.size}" already exists (Current stock: ${duplicate.stock} units). Update existing stock instead.`
@@ -227,36 +217,29 @@ export const firebaseApi = {
       }
 
       const id = Date.now()
+      const now = nowIso()
       const newProduct = {
         id,
-        name: body.name || '',
+        name: (body.name || '').trim(),
         category: body.category || '',
         category_name: body.category || '',
-        colour: body.colour || '',
-        size: body.size || '',
-        price: Number(body.price) || 0,
-        stock: Number(body.stock) || 0,
+        colour: (body.colour || '').trim(),
+        size: (body.size || '').trim(),
+        price: Math.max(0, Number(body.price) || 0),
+        stock: Math.max(0, Math.floor(Number(body.stock) || 0)),
         description: body.description || '',
         is_active: body.is_active !== false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: now,
+        updated_at: now,
       }
 
-      await set(ref(db, `products/${id}`), newProduct)
-
-      // Record initial stock movement
+      const writes = { [`products/${id}`]: newProduct }
       if (newProduct.stock > 0) {
-        const moveId = Date.now()
-        await set(ref(db, `stock_movements/${id}/${moveId}`), {
-          id: moveId,
-          product: id,
-          product_name: newProduct.name,
-          change: newProduct.stock,
-          reason: 'Initial stock',
-          created_at: new Date().toISOString(),
-        })
+        const m = logMovement(id, newProduct.name, newProduct.stock, 'Initial stock')
+        writes[m.path] = m.value
       }
-
+      await update(ref(db), writes)
+      await ensureCategory(newProduct.category)
       return newProduct
     }
 
@@ -264,197 +247,239 @@ export const firebaseApi = {
     const restockMatch = clean.match(/^products\/([^/]+)\/restock$/)
     if (restockMatch) {
       const prodId = restockMatch[1]
-      const amount = Number(body.amount) || 0
-      const prodSnap = await get(ref(db, `products/${prodId}`))
-      if (!prodSnap.exists()) throw new Error('Product not found')
+      const amount = Math.floor(Number(body.amount) || 0)
+      if (amount <= 0) throw new Error('Amount must be greater than 0.')
 
-      const current = prodSnap.val()
-      const newStock = (current.stock || 0) + amount
-      const updated = {
-        ...current,
-        stock: newStock,
-        updated_at: new Date().toISOString(),
-      }
+      const res = await adjustStock(prodId, amount)
+      if (!res.ok) throw new Error('Product not found')
 
-      await set(ref(db, `products/${prodId}`), updated)
-
-      // Add movement history
-      const moveId = Date.now()
-      await set(ref(db, `stock_movements/${prodId}/${moveId}`), {
-        id: moveId,
-        product: Number(prodId),
-        product_name: current.name,
-        change: amount,
-        reason: 'Stock added (Restock)',
-        created_at: new Date().toISOString(),
-      })
-
-      return updated
+      const m = logMovement(prodId, res.product.name, amount, body.reason || 'Stock added (Restock)')
+      await set(ref(db, m.path), m.value)
+      return res.product
     }
 
-    // POST /sales or /sales/ or /bills
+    // POST /sales or /bills — atomic checkout
     if (clean === 'sales' || clean === 'bills') {
-      const items = body.items || []
-      if (!items || items.length === 0) {
-        throw new Error('Cannot confirm sale with an empty cart.')
-      }
-
-      // Check live products
-      const prodSnap = await get(ref(db, 'products'))
-      const prodMap = prodSnap.exists() ? prodSnap.val() || {} : {}
-
-      // Verify stock for all items first
-      for (const it of items) {
-        const prodId = it.id || it.product || (it.p && it.p.id)
-        const qty = Number(it.qty || it.quantity || 1)
-        const currentProd = prodMap[prodId]
-        if (currentProd && (currentProd.stock || 0) < qty) {
-          throw new Error(
-            `Only ${currentProd.stock} units available for "${currentProd.name}" (${currentProd.colour} · Size ${currentProd.size}).`
-          )
-        }
-      }
-
-      // Generate sequential bill number: AJ-000001
-      const salesSnap = await get(ref(db, 'sales'))
-      const existingCount = salesSnap.exists()
-        ? Object.keys(salesSnap.val() || {}).length
-        : 0
-      const billNumber = body.bill || body.bill_number || `AJ-${String(existingCount + 1).padStart(6, '0')}`
-
-      const now = new Date().toISOString()
-      const saleId = Date.now()
-
-      // Deduct stock and log movements
-      for (const it of items) {
-        const prodId = it.id || it.product || (it.p && it.p.id)
-        const qty = Number(it.qty || it.quantity || 1)
-        const currentProd = prodMap[prodId]
-        if (currentProd) {
-          const newStock = Math.max(0, (currentProd.stock || 0) - qty)
-          await update(ref(db, `products/${prodId}`), {
-            stock: newStock,
-            updated_at: now,
-          })
-
-          const moveId = Date.now() + Math.floor(Math.random() * 1000)
-          await set(ref(db, `stock_movements/${prodId}/${moveId}`), {
-            id: moveId,
-            product: Number(prodId),
-            product_name: currentProd.name,
-            change: -qty,
-            reason: `Sold (${billNumber})`,
-            bill: billNumber,
-            created_at: now,
-          })
-        }
-      }
-
-      const saleRecord = {
-        id: saleId,
-        bill_number: billNumber,
-        bill: billNumber,
-        customer_name: (body.customer_name || body.customerName || '').trim(),
-        customer_mobile: (body.customer_mobile || body.customerMobile || '').trim(),
-        items: items.map((it) => {
-          const prodId = it.id || it.product || (it.p && it.p.id)
-          const currentProd = prodMap[prodId] || {}
-          return {
-            product: prodId,
-            name: it.name || currentProd.name || 'Product',
-            colour: it.colour || currentProd.colour || '',
-            size: it.size || currentProd.size || '',
-            price: Number(it.price || currentProd.price || 0),
-            qty: Number(it.qty || it.quantity || 1),
-            line_total: Number(it.price || currentProd.price || 0) * Number(it.qty || it.quantity || 1),
-          }
-        }),
-        subtotal: Number(body.subtotal || 0),
-        discount_percent: Number(body.discount_percent || body.discountPercent || 0),
-        discount: Number(body.discount || 0),
-        after_discount: Number(body.after_discount || body.afterDiscount || (Number(body.subtotal || 0) - Number(body.discount || 0))),
-        round_off: Boolean(body.round_off || body.roundOff),
-        rounding_adjustment: Number(body.rounding_adjustment || body.roundingAdjustment || 0),
-        total: Number(body.total || 0),
-        payment_method: body.payment_method || body.payment || 'Cash',
-        payment: body.payment_method || body.payment || 'Cash',
-        created_at: now,
-        at: now,
-      }
-
-      await set(ref(db, `sales/${saleId}`), saleRecord)
-      return saleRecord
+      return createSale(body)
     }
 
-    // Default POST fallback
-    const id = Date.now()
-    await set(ref(db, `${clean}/${id}`), { id, ...body })
-    return { id, ...body }
+    throw new Error(`Unsupported request: POST /${clean}`)
   },
 
   patch: async (path, body = {}) => {
-    await ensureAuth()
-    const clean = path.replace(/^\/api\/v1/, '').replace(/^\/|\/$/g, '')
+    requireAuth()
+    const clean = cleanPath(path)
 
     // PATCH /products/:id/
     const prodMatch = clean.match(/^products\/([^/]+)$/)
     if (prodMatch) {
       const prodId = prodMatch[1]
-      const snap = await get(ref(db, 'products'))
-      const allProducts = snap.exists()
-        ? (Array.isArray(snap.val()) ? snap.val().filter(Boolean) : Object.values(snap.val() || {}))
-        : []
+      const allProducts = toList((await get(ref(db, 'products'))).val())
+      const current = allProducts.find((p) => String(p.id) === String(prodId))
+      if (!current) throw new Error('Product not found')
 
-      const prodSnap = await get(ref(db, `products/${prodId}`))
-      const current = prodSnap.exists() ? prodSnap.val() : {}
+      const pick = (field) => (body[field] !== undefined ? body[field] : current[field] || '')
+      const name = String(pick('name')).trim().toLowerCase()
+      const colour = String(pick('colour')).trim().toLowerCase()
+      const size = String(pick('size')).trim().toLowerCase()
 
-      const name = (body.name !== undefined ? body.name : current.name || '').trim().toLowerCase()
-      const colour = (body.colour !== undefined ? body.colour : current.colour || '').trim().toLowerCase()
-      const size = (body.size !== undefined ? body.size : current.size || '').trim().toLowerCase()
-
-      const duplicate = allProducts.find((p) =>
-        String(p.id) !== String(prodId) &&
-        (p.name || '').trim().toLowerCase() === name &&
-        (p.colour || '').trim().toLowerCase() === colour &&
-        (p.size || '').trim().toLowerCase() === size
+      const duplicate = allProducts.find(
+        (p) =>
+          String(p.id) !== String(prodId) &&
+          (p.name || '').trim().toLowerCase() === name &&
+          (p.colour || '').trim().toLowerCase() === colour &&
+          (p.size || '').trim().toLowerCase() === size
       )
-
       if (duplicate) {
         throw new Error(
           `Another product with name "${body.name || current.name}", colour "${body.colour || current.colour}", and size "${body.size || current.size}" already exists.`
         )
       }
 
-      const updated = {
-        ...current,
-        ...body,
-        category_name: body.category || current.category_name || current.category,
-        updated_at: new Date().toISOString(),
+      const changes = { ...body }
+      delete changes.id
+      delete changes.stock_history
+      if (changes.stock !== undefined) {
+        changes.stock = Math.max(0, Math.floor(Number(changes.stock) || 0))
       }
+      if (changes.price !== undefined) changes.price = Math.max(0, Number(changes.price) || 0)
 
-      await update(ref(db, `products/${prodId}`), updated)
+      let oldStock = null
+      const result = await runTransaction(ref(db, `products/${prodId}`), (cur) => {
+        if (cur === null) return cur
+        oldStock = Number(cur.stock) || 0
+        return {
+          ...cur,
+          ...changes,
+          category_name: changes.category || cur.category_name || cur.category || '',
+          updated_at: nowIso(),
+        }
+      })
+      const updated = result.snapshot.val()
+      if (!updated) throw new Error('Product not found')
+
+      if (changes.stock !== undefined && oldStock !== null && changes.stock !== oldStock) {
+        const delta = changes.stock - oldStock
+        const m = logMovement(
+          prodId,
+          updated.name,
+          delta,
+          delta < 0 ? 'Stock adjusted' : 'Stock added'
+        )
+        await set(ref(db, m.path), m.value)
+      }
+      if (changes.category) await ensureCategory(changes.category)
       return updated
     }
 
-    await update(ref(db, clean), body)
-    return body
+    throw new Error(`Unsupported request: PATCH /${clean}`)
   },
 
   delete: async (path) => {
-    await ensureAuth()
-    const clean = path.replace(/^\/api\/v1/, '').replace(/^\/|\/$/g, '')
+    requireAuth()
+    const clean = cleanPath(path)
 
-    // DELETE /products/:id/
+    // DELETE /products/:id/ (past sales keep their own copy of the product details)
     const prodMatch = clean.match(/^products\/([^/]+)$/)
     if (prodMatch) {
-      const prodId = prodMatch[1]
-      await remove(ref(db, `products/${prodId}`))
+      await remove(ref(db, `products/${prodMatch[1]}`))
       return { success: true }
     }
 
-    await remove(ref(db, clean))
-    return { success: true }
+    throw new Error(`Unsupported request: DELETE /${clean}`)
   },
+}
+
+// ---------------------------------------------------------------------------
+// Checkout
+// ---------------------------------------------------------------------------
+// Steps:
+//   1. Merge duplicate cart lines.
+//   2. Deduct stock per product inside a transaction (never below zero).
+//      If any line fails, every deduction already made is restored.
+//   3. Take the next bill number from counters/bills inside a transaction.
+//   4. Recompute prices and totals from the live product records.
+//   5. Write the sale and its stock movements in ONE multi-path update.
+//      If that fails, stock is restored.
+async function createSale(body) {
+  const rawItems = body.items || []
+  if (rawItems.length === 0) throw new Error('Cannot confirm sale with an empty cart.')
+
+  // 1. Merge duplicate lines
+  const wanted = new Map()
+  for (const it of rawItems) {
+    const id = it.id ?? it.product ?? (it.p && it.p.id)
+    const qty = Math.floor(Number(it.qty ?? it.quantity ?? 1))
+    if (id === undefined || id === null || id === '') {
+      throw new Error('Every item in the bill must be a product from the stock list.')
+    }
+    if (!Number.isFinite(qty) || qty <= 0) continue
+    wanted.set(String(id), (wanted.get(String(id)) || 0) + qty)
+  }
+  if (wanted.size === 0) throw new Error('Cannot confirm sale with an empty cart.')
+
+  // 2. Deduct stock
+  const deducted = [] // { id, qty, product }
+  const restore = async () => {
+    await Promise.allSettled(deducted.map((d) => adjustStock(d.id, d.qty)))
+  }
+
+  try {
+    for (const [id, qty] of wanted) {
+      const res = await adjustStock(id, -qty)
+      if (!res.ok) {
+        if (res.reason === 'insufficient') {
+          const p = res.product
+          throw new Error(
+            `Only ${p.stock} units available for ${p.name} (${p.colour} · Size ${p.size}).`
+          )
+        }
+        throw new Error('A product in this bill no longer exists. Refresh and try again.')
+      }
+      deducted.push({ id, qty, product: res.product })
+    }
+
+    // 3. Next bill number
+    const counterRef = ref(db, 'counters/bills')
+    let seed = 0
+    const counterSnap = await get(counterRef)
+    if (!counterSnap.exists()) {
+      // First bill after migration: continue after any bills that already exist
+      const salesSnap = await get(ref(db, 'sales'))
+      seed = salesSnap.exists() ? Object.keys(salesSnap.val() || {}).length : 0
+    }
+    const counter = await runTransaction(counterRef, (cur) =>
+      (typeof cur === 'number' ? cur : seed) + 1
+    )
+    const billNumber = `AJ-${String(counter.snapshot.val()).padStart(6, '0')}`
+
+    // 4. Recompute everything from live product data
+    const items = deducted.map((d) => {
+      const price = round2(d.product.price)
+      return {
+        product: Number.isNaN(Number(d.id)) ? d.id : Number(d.id),
+        name: d.product.name,
+        colour: d.product.colour || '',
+        size: d.product.size || '',
+        price,
+        qty: d.qty,
+        line_total: round2(price * d.qty),
+      }
+    })
+    const subtotal = round2(items.reduce((s, i) => s + i.line_total, 0))
+    const discountPercent = Math.min(
+      100,
+      Math.max(0, Number(body.discount_percent ?? body.discountPercent ?? 0) || 0)
+    )
+    const discount = round2((subtotal * discountPercent) / 100)
+    const afterDiscount = round2(Math.max(0, subtotal - discount))
+
+    const roundOff = Boolean(body.round_off ?? body.roundOff)
+    const requestedTotal = Number(body.total)
+    let total = afterDiscount
+    if (roundOff && Number.isFinite(requestedTotal) && requestedTotal >= 0) {
+      total = round2(requestedTotal)
+    }
+    const roundingAdjustment = round2(total - afterDiscount)
+
+    const now = nowIso()
+    const saleId = push(ref(db, 'sales')).key
+    const payment = body.payment_method || body.payment || 'Cash'
+    const sale = {
+      id: saleId,
+      bill_number: billNumber,
+      bill: billNumber,
+      customer_name: String(body.customer_name || body.customerName || '').trim(),
+      customer_mobile: String(body.customer_mobile || body.customerMobile || '').trim(),
+      items,
+      subtotal,
+      discount_percent: discountPercent,
+      discount,
+      after_discount: afterDiscount,
+      round_off: roundOff,
+      rounding_adjustment: roundingAdjustment,
+      total,
+      payment_method: payment,
+      payment,
+      created_by: auth.currentUser?.email || auth.currentUser?.uid || '',
+      created_at: now,
+      at: now,
+    }
+
+    // 5. Sale + movements in one atomic write
+    const writes = { [`sales/${saleId}`]: sale }
+    for (const d of deducted) {
+      const m = logMovement(d.id, d.product.name, -d.qty, `Sold (${billNumber})`, {
+        bill: billNumber,
+      })
+      writes[m.path] = m.value
+    }
+    await update(ref(db), writes)
+    return sale
+  } catch (err) {
+    await restore()
+    throw err
+  }
 }
 
 export default firebaseApi

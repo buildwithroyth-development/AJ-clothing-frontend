@@ -1,7 +1,7 @@
-import { Menu } from 'lucide-react'
+import { Menu, LogOut } from 'lucide-react'
 import logoImg from '../../assets/AJ_logo.png'
 
-export default function Header({ activePage, mobileNavOpen, setMobileNavOpen }) {
+export default function Header({ activePage, mobileNavOpen, setMobileNavOpen, userEmail, onSignOut }) {
   return (
     <header className="top">
       <button
@@ -19,7 +19,20 @@ export default function Header({ activePage, mobileNavOpen, setMobileNavOpen }) 
         <span className="crumb-sep">/</span>
         <span>{activePage.toUpperCase()}</span>
       </div>
-      <div className="top-right"><b>●</b> Store workspace</div>
+      <div className="top-right">
+        <b>●</b> {userEmail || 'Store workspace'}
+        {onSignOut && (
+          <button
+            type="button"
+            className="btn tiny"
+            onClick={onSignOut}
+            style={{ marginLeft: 10 }}
+            aria-label="Sign out"
+          >
+            <LogOut size={13} style={{ marginRight: 4 }} /> Sign out
+          </button>
+        )}
+      </div>
     </header>
   )
 }
