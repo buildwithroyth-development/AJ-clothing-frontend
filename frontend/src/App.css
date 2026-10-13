@@ -511,7 +511,7 @@
 
 /* Thermal Printable Receipt */
 .receipt {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--font-body);
   max-width: 330px;
   margin: auto;
   color: #111;
@@ -536,6 +536,21 @@
   color: #555;
 }
 
+.receipt .bill-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #111;
+}
+
+.receipt .bill-num-val {
+  font-family: var(--font-bill-num);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
 .receipt hr {
   border: 0;
   border-top: 1px dashed #888;
@@ -544,6 +559,7 @@
 
 .receipt table {
   width: 100%;
+  min-width: 0 !important;
   border-collapse: collapse;
 }
 
@@ -551,17 +567,45 @@
   font-size: 11px;
   padding: 5px 2px;
   text-align: left;
+  border: 0 !important;
 }
 
 .receipt td:last-child, .receipt th:last-child {
   text-align: right;
+  font-family: var(--font-bill-num);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.receipt .receipt-qty {
+  font-family: var(--font-bill-num);
+  font-weight: 600;
+}
+
+.receipt .calc-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.receipt .calc-val {
+  font-family: var(--font-bill-num);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .receipt .sum {
   text-align: right;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: bold;
   padding-top: 8px;
+}
+
+.receipt .sum span:last-child {
+  font-family: var(--font-bill-num);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.02em;
 }
 
 @media print {

@@ -114,20 +114,20 @@ export default function AllBillsPage() {
                   return (
                     <tr key={s.id || billNum}>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Receipt size={16} color="var(--accent)" />
-                          <b style={{ color: 'var(--ink)' }}>{billNum}</b>
-                        </div>
+                        <span className="bill-badge">
+                          <Receipt size={14} className="bill-icon" />
+                          <span>{billNum}</span>
+                        </span>
                       </td>
                       <td style={{ color: 'var(--muted)', fontSize: 12 }}>{formattedDate}</td>
                       <td>{s.customer_name || s.customerName || 'Walk-in customer'}</td>
-                      <td style={{ color: 'var(--muted)' }}>{s.customer_mobile || s.customerMobile || '—'}</td>
+                      <td style={{ color: 'var(--muted)' }} className="bill-num-text">{s.customer_mobile || s.customerMobile || '—'}</td>
                       <td>
                         <span className="pill ok" style={{ background: '#f5efe8', color: 'var(--accent)' }}>
                           {s.payment_method || s.payment || 'Cash'}
                         </span>
                       </td>
-                      <td style={{ fontWeight: 700, color: 'var(--ink)' }}>{formatINR(s.total)}</td>
+                      <td style={{ fontWeight: 700, color: 'var(--ink)' }} className="bill-num-text">{formatINR(s.total)}</td>
                       <td>
                         <div className="product-actions" style={{ justifyContent: 'flex-end' }}>
                           <button

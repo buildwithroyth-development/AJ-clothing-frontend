@@ -1,18 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { X, Printer } from 'lucide-react'
 import { formatINR } from '../../utils/format'
+import { getSettings } from '../../utils/settings'
 
 export default function ReceiptModal({
   sale,
-  storeInfo = {
-    name: 'AJ Clothing Store',
-    address: 'Commercial Street, Bangalore',
-    phone: '+91 98765 43210',
-    email: 'contact@ajclothing.com',
-    note: 'Thank you for shopping with us! Returns within 7 days with tag intact.',
-  },
+  storeInfo: propStoreInfo,
   onClose,
 }) {
+  const [settings, setSettings] = useState(getSettings)
+
+  useEffect(() => {
+    setSettings(getSettings())
+  }, [])
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose()
@@ -22,6 +23,16 @@ export default function ReceiptModal({
   }, [onClose])
 
   if (!sale) return null
+
+  const storeInfo = propStoreInfo || {
+    name: settings.storeName || 'AJ Clothing Store',
+    tagline: settings.tagline || '',
+    address: settings.address || 'Commercial Street, Bangalore',
+    phone: settings.phone || '+91 98765 43210',
+    email: settings.email || 'contact@ajclothing.com',
+    gstin: settings.gstin || '',
+    note: settings.note || 'Thank you for shopping with us! Returns within 7 days with tag intact.',
+  }
 
   const items = sale.items || []
   const billNum = sale.bill_number || sale.bill || 'AJ-000000'
@@ -42,7 +53,7 @@ export default function ReceiptModal({
     <div className="modal" onClick={onClose}>
       <div
         className="modal-card"
-        style={{ maxWidth: 420, padding: 20 }}
+        style={{ maxWidth: 440, padding: 20 }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-head" style={{ marginBottom: 14 }}>
@@ -67,22 +78,35 @@ export default function ReceiptModal({
         {/* Printable Thermal Receipt Slip */}
         <div className="receipt print-only-receipt">
           <h2>{storeInfo.name}</h2>
+          {storeInfo.tagline && (
+            <p style={{ fontStyle: 'italic', color: '#666', marginTop: 2, marginBottom: 4 }}>
+              {storeInfo.tagline}
+            </p>
+          )}
           <p>{storeInfo.address}</p>
           <p>
             {storeInfo.phone} · {storeInfo.email}
           </p>
+          {storeInfo.gstin && (
+            <p style={{ fontWeight: 600, color: '#333' }}>GSTIN: {storeInfo.gstin}</p>
+          )}
 
           <hr />
 
-          <p style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#111' }}>
-            <span>BILL: {billNum}</span>
-            <span>{formattedDate}</span>
-          </p>
+          <div className="bill-meta-row">
+            <span>
+              BILL:{' '}
+              <span className="bill-num-val" style={{ color: 'var(--accent)' }}>
+                {billNum}
+              </span>
+            </span>
+            <span style={{ fontSize: 11, color: '#555' }}>{formattedDate}</span>
+          </div>
 
-          <p style={{ textAlign: 'left', margin: '4px 0' }}>
-            Customer: {sale.customer_name || sale.customerName || 'Walk-in customer'}
+          <p style={{ textAlign: 'left', margin: '6px 0 4px', fontSize: 11 }}>
+            Customer: <strong>{sale.customer_name || sale.customerName || 'Walk-in customer'}</strong>
             {(sale.customer_mobile || sale.customerMobile) && (
-              <span> · Ph: {sale.customer_mobile || sale.customerMobile}</span>
+              <span> · Ph: <span className="bill-num-val">{sale.customer_mobile || sale.customerMobile}</span></span>
             )}
           </p>
 
@@ -107,7 +131,9 @@ export default function ReceiptModal({
                       <strong>{it.name || it.product_name}</strong>
                       {variantDesc && <div style={{ fontSize: 10, color: '#666' }}>{variantDesc}</div>}
                     </td>
-                    <td style={{ textAlign: 'center' }}>{it.qty || it.quantity || 1}</td>
+                    <td style={{ textAlign: 'center' }} className="receipt-qty">
+                      {it.qty || it.quantity || 1}
+                    </td>
                     <td>{formatINR((it.price || 0) * (it.qty || it.quantity || 1))}</td>
                   </tr>
                 )
@@ -118,34 +144,34 @@ export default function ReceiptModal({
           <hr />
 
           <div style={{ fontSize: 11, display: 'grid', gap: 4 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="calc-row">
               <span>Subtotal</span>
-              <span>{formatINR(sale.subtotal)}</span>
+              <span className="calc-val">{formatINR(sale.subtotal)}</span>
             </div>
 
             {Number(sale.discount) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a64e3d' }}>
+              <div className="calc-row" style={{ color: '#a64e3d' }}>
                 <span>
                   Discount
                   {(sale.discount_percent || sale.discountPercent)
                     ? ` (${sale.discount_percent || sale.discountPercent}%)`
                     : ''}
                 </span>
-                <span>-{formatINR(sale.discount)}</span>
+                <span className="calc-val">-{formatINR(sale.discount)}</span>
               </div>
             )}
 
             {Number(sale.discount) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div className="calc-row">
                 <span>After discount</span>
-                <span>{formatINR(sale.after_discount || sale.afterDiscount)}</span>
+                <span className="calc-val">{formatINR(sale.after_discount || sale.afterDiscount)}</span>
               </div>
             )}
 
             {sale.round_off && Number(sale.rounding_adjustment || sale.roundingAdjustment) !== 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666' }}>
+              <div className="calc-row" style={{ color: '#666' }}>
                 <span>Round-off adjustment</span>
-                <span>
+                <span className="calc-val">
                   {Number(sale.rounding_adjustment || sale.roundingAdjustment) > 0 ? '+' : ''}
                   {formatINR(sale.rounding_adjustment || sale.roundingAdjustment)}
                 </span>
@@ -157,7 +183,7 @@ export default function ReceiptModal({
 
           <div className="sum" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>FINAL BILL</span>
-            <span>{formatINR(sale.total)}</span>
+            <span style={{ color: 'var(--accent)' }}>{formatINR(sale.total)}</span>
           </div>
 
           <p style={{ textAlign: 'left', marginTop: 8, fontSize: 11 }}>
@@ -166,7 +192,9 @@ export default function ReceiptModal({
 
           <hr />
 
-          <p style={{ fontSize: 10, color: '#777', marginTop: 10 }}>{storeInfo.note}</p>
+          <p style={{ fontSize: 10, color: '#777', marginTop: 10, lineHeight: 1.4 }}>
+            {storeInfo.note}
+          </p>
         </div>
       </div>
     </div>

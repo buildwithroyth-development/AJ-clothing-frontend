@@ -13,6 +13,7 @@ import DashboardPage from './pages/DashboardPage'
 import StockPage from './pages/StockPage'
 import BillingPage from './pages/BillingPage'
 import AllBillsPage from './pages/AllBillsPage'
+import SettingsPage from './pages/SettingsPage'
 import ComingSoonPage from './pages/ComingSoonPage'
 
 const NAV_ITEMS = [
@@ -50,6 +51,8 @@ export default function App({
         return <BillingPage />
       case 'bills':
         return <AllBillsPage />
+      case 'settings':
+        return <SettingsPage userEmail={userEmail} onSignOut={onSignOut} />
       default:
         return (
           <ComingSoonPage
