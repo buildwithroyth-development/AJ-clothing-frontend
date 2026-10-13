@@ -22,14 +22,16 @@ export default function DashboardPage({
 }) {
   const [products, setProducts]   = useState([])
   const [movements, setMovements] = useState(initialMovements || [])
+  const [sales, setSales]         = useState([])
   const [loading, setLoading]     = useState(true)
 
   const loadDashboardData = useCallback(async () => {
     setLoading(true)
     try {
-      const [prods, moves] = await Promise.all([
+      const [prods, moves, salesRes] = await Promise.all([
         api.get('/products/').catch(() => []),
         api.get('/stock_movements').catch(() => []),
+        api.get('/sales/').catch(() => api.get('/sales').catch(() => [])),
       ])
 
       const prodList = Array.isArray(prods) ? prods : (prods?.results || [])
@@ -38,6 +40,9 @@ export default function DashboardPage({
       if (Array.isArray(moves) && moves.length > 0) {
         setMovements(moves)
       }
+
+      const salesList = Array.isArray(salesRes) ? salesRes : (salesRes?.results || [])
+      setSales(salesList)
     } catch (err) {
       console.warn('Dashboard fetch error:', err)
     }
@@ -48,7 +53,7 @@ export default function DashboardPage({
     loadDashboardData()
   }, [loadDashboardData])
 
-  // Derive metrics and low stock list from live products
+  // Derive metrics and low stock list from live products and sales
   const lowStockItems = products.length > 0
     ? products.filter((p) => Number(p.stock) <= 5)
     : (initialLowStock || [])
@@ -61,8 +66,24 @@ export default function DashboardPage({
     ? products.length
     : (initialMetrics?.totalProducts || 0)
 
-  const todaySales = initialMetrics?.todaySales || 0
-  const soldToday  = initialMetrics?.soldToday || 0
+  const todayStr = new Date().toDateString()
+  const todaySalesList = sales.filter((s) => {
+    const d = s.created_at || s.at
+    return d ? new Date(d).toDateString() === todayStr : false
+  })
+
+  const todaySales = sales.length > 0
+    ? todaySalesList.reduce((acc, s) => acc + (Number(s.total) || 0), 0)
+    : (initialMetrics?.todaySales || 0)
+
+  const soldToday = sales.length > 0
+    ? todaySalesList.reduce(
+        (acc, s) =>
+          acc +
+          (s.items?.reduce((a, it) => a + (Number(it.qty || it.quantity) || 0), 0) || 0),
+        0
+      )
+    : (initialMetrics?.soldToday || 0)
 
   return (
     <div>

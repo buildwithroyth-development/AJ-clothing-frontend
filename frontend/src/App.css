@@ -211,3 +211,387 @@
   background: #fbe7e1;
   color: #ae4434;
 }
+
+/* ==========================================================================
+   Billing & POS Counter
+   ========================================================================== */
+
+.billing {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.bill-panel {
+  position: sticky;
+  top: 16px;
+  padding: 24px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.bill-panel h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 12px 0 6px;
+  font-family: var(--font-serif);
+  font-size: 20px;
+}
+
+.bill-panel h3 span {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.cart-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding: 14px 0;
+}
+
+.cart-row b {
+  font-size: 13px;
+  color: var(--ink);
+  display: block;
+}
+
+.cart-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.stepper button {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  transition: all 0.15s ease;
+}
+
+.stepper button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--light);
+}
+
+.stepper button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  margin: 14px 0;
+  color: var(--muted);
+}
+
+.total-row strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.total-row.big {
+  border-top: 1px dashed var(--line);
+  padding-top: 16px;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.total-row.big strong {
+  color: var(--accent);
+  font-size: 24px;
+}
+
+.payment-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 8px 0 14px;
+}
+
+.payment-options button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 10px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.payment-options button:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.payment-options button.selected {
+  background: var(--light);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.bill-help {
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.recent-row div {
+  flex: 1;
+}
+
+.recent-row b {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.recent-row small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Variant Picker Dialog */
+.picker-card {
+  width: min(850px, 100%);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 90vh;
+}
+
+.picker-top {
+  padding: 24px 25px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.picker-top h2 {
+  margin: 6px 0 8px;
+  font-family: var(--font-serif);
+  font-size: 22px;
+}
+
+.picker-top p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 14px;
+}
+
+.picker-body {
+  padding: 20px 25px;
+  overflow-y: auto;
+  min-height: 120px;
+}
+
+.variant-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.variant-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  background: #faf8f5;
+  transition: all 0.15s ease;
+}
+
+.variant-card:hover {
+  border-color: rgba(166, 78, 61, 0.4);
+}
+
+.variant-card h3 {
+  font-size: 15px;
+  margin: 0 0 10px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.variant-meta {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.variant-meta span {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.variant-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 0;
+}
+
+.variant-price strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.picker-footer {
+  padding: 16px 25px;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.picker-footer small {
+  display: block;
+  color: var(--muted);
+  margin-top: 3px;
+  font-size: 11px;
+}
+
+.picker-status {
+  color: var(--green);
+  font-size: 12px;
+  min-height: 18px;
+  margin: 10px 0 0;
+  font-weight: 500;
+}
+
+/* Thermal Printable Receipt */
+.receipt {
+  font-family: 'Courier New', Courier, monospace;
+  max-width: 330px;
+  margin: auto;
+  color: #111;
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.receipt h2 {
+  text-align: center;
+  margin: 0;
+  font-size: 18px;
+  font-family: var(--font-serif);
+  letter-spacing: 0.05em;
+}
+
+.receipt p {
+  text-align: center;
+  font-size: 11px;
+  margin: 4px 0;
+  color: #555;
+}
+
+.receipt hr {
+  border: 0;
+  border-top: 1px dashed #888;
+  margin: 12px 0;
+}
+
+.receipt table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.receipt th, .receipt td {
+  font-size: 11px;
+  padding: 5px 2px;
+  text-align: left;
+}
+
+.receipt td:last-child, .receipt th:last-child {
+  text-align: right;
+}
+
+.receipt .sum {
+  text-align: right;
+  font-size: 16px;
+  font-weight: bold;
+  padding-top: 8px;
+}
+
+@media print {
+  body > * {
+    visibility: hidden;
+  }
+  .print-only-receipt, .print-only-receipt * {
+    visibility: visible;
+  }
+  .print-only-receipt {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 6mm;
+    box-shadow: none;
+    border: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .billing {
+    grid-template-columns: 1fr;
+  }
+  .bill-panel {
+    position: static;
+  }
+  .variant-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

@@ -137,6 +137,15 @@ export const firebaseApi = {
       return Object.values(val || {})
     }
 
+    // GET /sales or /sales/ or /bills
+    if (clean === 'sales' || clean === 'bills') {
+      const snap = await get(ref(db, 'sales'))
+      if (!snap.exists()) return []
+      const val = snap.val()
+      const list = Array.isArray(val) ? val.filter(Boolean) : Object.values(val || {})
+      return list.sort((a, b) => new Date(b.created_at || b.at || 0) - new Date(a.created_at || a.at || 0))
+    }
+
     // GET /stock_movements or /movements
     if (clean === 'stock_movements' || clean === 'movements') {
       const [moveSnap, prodSnap] = await Promise.all([
@@ -281,6 +290,100 @@ export const firebaseApi = {
       })
 
       return updated
+    }
+
+    // POST /sales or /sales/ or /bills
+    if (clean === 'sales' || clean === 'bills') {
+      const items = body.items || []
+      if (!items || items.length === 0) {
+        throw new Error('Cannot confirm sale with an empty cart.')
+      }
+
+      // Check live products
+      const prodSnap = await get(ref(db, 'products'))
+      const prodMap = prodSnap.exists() ? prodSnap.val() || {} : {}
+
+      // Verify stock for all items first
+      for (const it of items) {
+        const prodId = it.id || it.product || (it.p && it.p.id)
+        const qty = Number(it.qty || it.quantity || 1)
+        const currentProd = prodMap[prodId]
+        if (currentProd && (currentProd.stock || 0) < qty) {
+          throw new Error(
+            `Only ${currentProd.stock} units available for "${currentProd.name}" (${currentProd.colour} · Size ${currentProd.size}).`
+          )
+        }
+      }
+
+      // Generate sequential bill number: AJ-000001
+      const salesSnap = await get(ref(db, 'sales'))
+      const existingCount = salesSnap.exists()
+        ? Object.keys(salesSnap.val() || {}).length
+        : 0
+      const billNumber = body.bill || body.bill_number || `AJ-${String(existingCount + 1).padStart(6, '0')}`
+
+      const now = new Date().toISOString()
+      const saleId = Date.now()
+
+      // Deduct stock and log movements
+      for (const it of items) {
+        const prodId = it.id || it.product || (it.p && it.p.id)
+        const qty = Number(it.qty || it.quantity || 1)
+        const currentProd = prodMap[prodId]
+        if (currentProd) {
+          const newStock = Math.max(0, (currentProd.stock || 0) - qty)
+          await update(ref(db, `products/${prodId}`), {
+            stock: newStock,
+            updated_at: now,
+          })
+
+          const moveId = Date.now() + Math.floor(Math.random() * 1000)
+          await set(ref(db, `stock_movements/${prodId}/${moveId}`), {
+            id: moveId,
+            product: Number(prodId),
+            product_name: currentProd.name,
+            change: -qty,
+            reason: `Sold (${billNumber})`,
+            bill: billNumber,
+            created_at: now,
+          })
+        }
+      }
+
+      const saleRecord = {
+        id: saleId,
+        bill_number: billNumber,
+        bill: billNumber,
+        customer_name: (body.customer_name || body.customerName || '').trim(),
+        customer_mobile: (body.customer_mobile || body.customerMobile || '').trim(),
+        items: items.map((it) => {
+          const prodId = it.id || it.product || (it.p && it.p.id)
+          const currentProd = prodMap[prodId] || {}
+          return {
+            product: prodId,
+            name: it.name || currentProd.name || 'Product',
+            colour: it.colour || currentProd.colour || '',
+            size: it.size || currentProd.size || '',
+            price: Number(it.price || currentProd.price || 0),
+            qty: Number(it.qty || it.quantity || 1),
+            line_total: Number(it.price || currentProd.price || 0) * Number(it.qty || it.quantity || 1),
+          }
+        }),
+        subtotal: Number(body.subtotal || 0),
+        discount_percent: Number(body.discount_percent || body.discountPercent || 0),
+        discount: Number(body.discount || 0),
+        after_discount: Number(body.after_discount || body.afterDiscount || (Number(body.subtotal || 0) - Number(body.discount || 0))),
+        round_off: Boolean(body.round_off || body.roundOff),
+        rounding_adjustment: Number(body.rounding_adjustment || body.roundingAdjustment || 0),
+        total: Number(body.total || 0),
+        payment_method: body.payment_method || body.payment || 'Cash',
+        payment: body.payment_method || body.payment || 'Cash',
+        created_at: now,
+        at: now,
+      }
+
+      await set(ref(db, `sales/${saleId}`), saleRecord)
+      return saleRecord
     }
 
     // Default POST fallback

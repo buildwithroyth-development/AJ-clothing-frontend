@@ -11,6 +11,8 @@ import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
 import DashboardPage from './pages/DashboardPage'
 import StockPage from './pages/StockPage'
+import BillingPage from './pages/BillingPage'
+import AllBillsPage from './pages/AllBillsPage'
 import ComingSoonPage from './pages/ComingSoonPage'
 
 const NAV_ITEMS = [
@@ -42,6 +44,10 @@ export default function App({
         )
       case 'stock':
         return <StockPage />
+      case 'billing':
+        return <BillingPage />
+      case 'bills':
+        return <AllBillsPage />
       default:
         return (
           <ComingSoonPage
