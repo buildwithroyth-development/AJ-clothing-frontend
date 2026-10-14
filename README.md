@@ -35,15 +35,15 @@ The React project is located in the `frontend/` directory.
 React app (this repo)  ──Firebase ID token──▶  AJ Clothing API (Django)  ──Admin SDK──▶  Realtime Database
 ```
 
-- **Sign-in** uses Firebase Authentication (email + password). The app sends the user's ID token with every API call.
+- **Sign-in / Create account** use Firebase Authentication (email + password). New users get a verification email and can sign in once it is verified. The app sends the user's ID token with every API call.
 - **All data** (products, stock, bills) goes through the API in the `AJ-clothing-backend` repo, which does the billing and stock logic on the server.
 - The database rules (`database.rules.json`) **deny all direct access**. The API uses the Admin SDK, which is not affected by the rules.
 
 ## Firebase setup
 
 1. **Enable sign-in**: Firebase console → Authentication → Sign-in method → enable *Email/Password*. Disable *Anonymous*.
-2. **Create staff accounts**: Authentication → Users → *Add user*.
-3. **Allow each staff account**: Realtime Database → Data → add `staff/<user UID>` with the value `true` (the UID is in the Users list). The API rejects anyone who is not listed.
+2. **Accounts**: staff can register themselves with *Create account* (they receive a verification email), or you can add them under Authentication → Users → *Add user*.
+3. **Approve each account**: Realtime Database → Data → add `staff/<user UID>` with the value `true` (the UID is in the Users list). Until then a verified user sees *Waiting for approval*. (The backend can also approve verified emails automatically; see its README.)
 4. **Deploy the rules** in `database.rules.json` (deny all):
    ```bash
    npm install -g firebase-tools

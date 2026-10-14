@@ -799,18 +799,6 @@ table {
   min-width: 640px;
 }
 
-.receipt table {
-  min-width: 0 !important;
-  width: 100% !important;
-  border-collapse: collapse !important;
-}
-
-.receipt td,
-.receipt th {
-  border: 0 !important;
-  padding: 5px 2px !important;
-}
-
 th {
   background: var(--bg);
   color: var(--muted);

@@ -24,20 +24,28 @@ export default function DashboardPage({
   const [movements, setMovements] = useState(initialMovements || [])
   const [sales, setSales]         = useState([])
   const [loading, setLoading]     = useState(true)
+  // Changes when the calendar day rolls over, so "today" figures are recomputed after midnight.
+  const [dayKey, setDayKey]       = useState(() => new Date().toDateString())
 
   const loadDashboardData = useCallback(async () => {
     setLoading(true)
     try {
+      // Only this calendar day's stock movements (from 12:00 AM local time).
+      const startOfToday = new Date()
+      startOfToday.setHours(0, 0, 0, 0)
+      const movementsPath = `/stock_movements/?since=${encodeURIComponent(startOfToday.toISOString())}&limit=50`
+
       const [prods, moves, salesRes] = await Promise.all([
         api.get('/products/').catch(() => []),
-        api.get('/stock_movements').catch(() => []),
+        api.get(movementsPath).catch(() => null),
         api.get('/sales/').catch(() => api.get('/sales').catch(() => [])),
       ])
 
       const prodList = Array.isArray(prods) ? prods : (prods?.results || [])
       setProducts(prodList)
 
-      if (Array.isArray(moves) && moves.length > 0) {
+      // An empty list is a valid answer (nothing has moved yet today); only a failed request keeps the old list.
+      if (Array.isArray(moves)) {
         setMovements(moves)
       }
 
@@ -53,6 +61,29 @@ export default function DashboardPage({
     loadDashboardData()
   }, [loadDashboardData])
 
+  // Roll over to the new day: at 12:00 AM, and when the tab becomes visible again
+  // (a computer that slept overnight will not have fired the timer).
+  useEffect(() => {
+    const rollOverIfNewDay = () => {
+      const now = new Date().toDateString()
+      if (now !== dayKey) {
+        setDayKey(now)
+        loadDashboardData()
+      }
+    }
+    const nextMidnight = new Date()
+    nextMidnight.setHours(24, 0, 1, 0)
+    const timer = setTimeout(rollOverIfNewDay, Math.max(1000, nextMidnight - Date.now()))
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') rollOverIfNewDay()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [dayKey, loadDashboardData])
+
   // Derive metrics and low stock list from live products and sales
   const lowStockItems = products.length > 0
     ? products.filter((p) => Number(p.stock) <= 5)
@@ -66,7 +97,7 @@ export default function DashboardPage({
     ? products.length
     : (initialMetrics?.totalProducts || 0)
 
-  const todayStr = new Date().toDateString()
+  const todayStr = dayKey
   const todaySalesList = sales.filter((s) => {
     const d = s.created_at || s.at
     return d ? new Date(d).toDateString() === todayStr : false
@@ -116,7 +147,7 @@ export default function DashboardPage({
       <div className="stats">
         {[
           { icon: TrendingUp,  label: "Today's sales",        value: formatINR(todaySales) },
-          { icon: ShoppingBag, label: "Products sold today",   value: soldToday },
+          { icon: ShoppingBag, label: "Items sold today",      value: soldToday },
           { icon: Boxes,       label: "Total available stock", value: loading && totalStock === 0 ? '…' : totalStock },
           { icon: Layers,      label: "Total products",        value: loading && totalProducts === 0 ? '…' : totalProducts },
         ].map(({ icon: Icon, label, value }) => (
@@ -191,7 +222,7 @@ export default function DashboardPage({
         <section className="panel">
           <div className="panel-title">
             <div>
-              <span className="eyebrow">LATEST MOVEMENTS</span>
+              <span className="eyebrow">TODAY&apos;S STOCK MOVEMENTS</span>
               <h3>Today&apos;s activity</h3>
             </div>
           </div>

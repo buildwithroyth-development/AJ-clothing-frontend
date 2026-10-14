@@ -1,124 +1,158 @@
 import { useState } from 'react'
-import { signIn } from '../api/firebase'
-import logoImg from '../assets/AJ_logo.png'
+import { signIn, registerUser, authErrorMessage } from '../api/firebase'
+import AuthShell from '../components/auth/AuthShell'
 
-const friendlyError = (err) => {
-  switch (err?.code) {
-    case 'auth/invalid-credential':
-    case 'auth/wrong-password':
-    case 'auth/user-not-found':
-    case 'auth/invalid-email':
-      return 'Incorrect email or password.'
-    case 'auth/too-many-requests':
-      return 'Too many attempts. Please wait a few minutes and try again.'
-    case 'auth/network-request-failed':
-      return 'Network error. Check your connection and try again.'
-    default:
-      return err?.message || 'Could not sign in.'
-  }
-}
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/
+
+const tabStyle = (active) => ({
+  flex: 1,
+  padding: '9px 0',
+  border: 0,
+  borderBottom: `2px solid ${active ? 'var(--accent)' : 'var(--line)'}`,
+  background: 'none',
+  cursor: 'pointer',
+  fontWeight: 600,
+  fontSize: 13,
+  color: active ? 'var(--accent)' : 'var(--muted)',
+})
+
+const fieldError = { color: '#9f3c31', fontSize: 11, marginTop: 4 }
 
 export default function LoginPage({ onDevBypass }) {
+  const [mode, setMode] = useState('signin') // 'signin' | 'register'
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [errors, setErrors] = useState({})
+  const [formError, setFormError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const switchMode = (next) => {
+    setMode(next)
+    setErrors({})
+    setFormError('')
+    setPassword('')
+    setConfirm('')
+  }
+
+  const validate = () => {
+    const e = {}
+    if (mode === 'register' && !name.trim()) e.name = 'Please enter your full name.'
+    if (!email.trim()) e.email = 'Email address is required.'
+    else if (!EMAIL_RE.test(email.trim())) e.email = 'Please enter a valid email address.'
+    if (!password) e.password = 'Password is required.'
+    else if (mode === 'register' && password.length < 6) e.password = 'Password must be at least 6 characters.'
+    if (mode === 'register' && confirm !== password) e.confirm = 'Passwords do not match.'
+    return e
+  }
+
+  const handleSubmit = async (ev) => {
+    ev.preventDefault()
+    const e = validate()
+    setErrors(e)
+    setFormError('')
+    if (Object.keys(e).length > 0) return
+
     setBusy(true)
-    setError('')
     try {
-      await signIn(email, password)
+      if (mode === 'register') await registerUser({ name, email, password })
+      else await signIn(email, password)
+      // On success the app notices the new session and shows the next screen.
     } catch (err) {
-      setError(friendlyError(err))
+      const msg = authErrorMessage(err, 'Could not complete the request.')
+      if (err?.code === 'auth/email-already-in-use') setErrors({ email: msg })
+      else setFormError(msg)
       setBusy(false)
     }
   }
 
+  const isRegister = mode === 'register'
+
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        padding: 16,
-        background: 'var(--bg)',
-      }}
+    <AuthShell
+      title={isRegister ? 'Create your account' : 'Sign in'}
+      subtitle={
+        isRegister
+          ? 'We will email you a link to verify your address before you can sign in.'
+          : 'Sign in to manage stock and billing.'
+      }
+      onSubmit={handleSubmit}
     >
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: '100%',
-          maxWidth: 380,
-          background: '#fff',
-          border: '1px solid var(--line)',
-          borderRadius: 14,
-          padding: 28,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-          <img src={logoImg} alt="AJ Clothing" style={{ height: 36 }} />
-          <span className="eyebrow">AJ CLOTHING</span>
-        </div>
-        <h1 style={{ margin: '0 0 4px', fontSize: 22 }}>Staff sign in</h1>
-        <p style={{ margin: '0 0 18px', color: 'var(--muted)', fontSize: 13 }}>
-          Sign in to manage stock and billing.
-        </p>
-
-        {error && (
-          <div className="notice error" role="alert" style={{ marginBottom: 12 }}>
-            {error}
-          </div>
-        )}
-
-        <label htmlFor="login-email">Email</label>
-        <input
-          id="login-email"
-          type="email"
-          autoComplete="username"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <label htmlFor="login-password" style={{ marginTop: 10, display: 'block' }}>
-          Password
-        </label>
-        <input
-          id="login-password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <button
-          type="submit"
-          className="btn primary full"
-          disabled={busy}
-          style={{ marginTop: 16 }}
-        >
-          {busy ? 'Signing in…' : 'Sign in'}
+      <div style={{ display: 'flex', marginBottom: 16 }} role="tablist">
+        <button type="button" role="tab" aria-selected={!isRegister} style={tabStyle(!isRegister)} onClick={() => switchMode('signin')}>
+          Sign in
         </button>
+        <button type="button" role="tab" aria-selected={isRegister} style={tabStyle(isRegister)} onClick={() => switchMode('register')}>
+          Create account
+        </button>
+      </div>
 
-        {onDevBypass && (
-          <div style={{ marginTop: 16, textAlign: 'center' }}>
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
-              — or local development —
-            </div>
-            <button
-              type="button"
-              className="btn full"
-              onClick={onDevBypass}
-              style={{ background: '#f5f0e6', borderColor: 'var(--line)', fontSize: 13, color: 'var(--ink)' }}
-            >
-              Continue without Sign In (Dev Mode)
-            </button>
-          </div>
-        )}
-      </form>
-    </div>
+      {formError && (
+        <div className="notice error" role="alert" style={{ marginBottom: 12 }}>
+          {formError}
+        </div>
+      )}
+
+      {isRegister && (
+        <>
+          <label htmlFor="auth-name">Full name</label>
+          <input id="auth-name" autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
+          {errors.name && <div style={fieldError}>{errors.name}</div>}
+        </>
+      )}
+
+      <label htmlFor="auth-email" style={{ marginTop: isRegister ? 10 : 0, display: 'block' }}>Email</label>
+      <input
+        id="auth-email"
+        type="email"
+        autoComplete="username"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      {errors.email && <div style={fieldError}>{errors.email}</div>}
+
+      <label htmlFor="auth-password" style={{ marginTop: 10, display: 'block' }}>Password</label>
+      <input
+        id="auth-password"
+        type="password"
+        autoComplete={isRegister ? 'new-password' : 'current-password'}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      {errors.password && <div style={fieldError}>{errors.password}</div>}
+
+      {isRegister && (
+        <>
+          <label htmlFor="auth-confirm" style={{ marginTop: 10, display: 'block' }}>Confirm password</label>
+          <input
+            id="auth-confirm"
+            type="password"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+          {errors.confirm && <div style={fieldError}>{errors.confirm}</div>}
+        </>
+      )}
+
+      <button type="submit" className="btn primary full" disabled={busy} style={{ marginTop: 16 }}>
+        {busy ? (isRegister ? 'Creating account…' : 'Signing in…') : isRegister ? 'Create account' : 'Sign in'}
+      </button>
+
+      {onDevBypass && (
+        <div style={{ marginTop: 16, textAlign: 'center' }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>— or local development —</div>
+          <button
+            type="button"
+            className="btn full"
+            onClick={onDevBypass}
+            style={{ background: '#f5f0e6', borderColor: 'var(--line)', fontSize: 13, color: 'var(--ink)' }}
+          >
+            Continue without Sign In (Dev Mode)
+          </button>
+        </div>
+      )}
+    </AuthShell>
   )
 }

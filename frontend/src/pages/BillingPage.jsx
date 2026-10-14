@@ -22,6 +22,8 @@ const getProductCategory = (p) => {
   return (p.category_name || p.category || 'Uncategorized').trim()
 }
 
+const fieldErrorStyle = { color: '#9f3c31', fontSize: 11, marginTop: 4 }
+
 const money = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 
 export default function BillingPage() {
@@ -35,6 +37,8 @@ export default function BillingPage() {
   const [paymentMethod, setPaymentMethod] = useState('Cash')
   const [customerName, setCustomerName] = useState('')
   const [customerMobile, setCustomerMobile] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({}) // { name, mobile, email, discount }
   const [catalogueSearch, setCatalogueSearch] = useState('')
   const [pickerCategory, setPickerCategory] = useState(null)
   const [receiptSale, setReceiptSale] = useState(null)
@@ -124,6 +128,8 @@ export default function BillingPage() {
     setManualAmount('')
     setCustomerName('')
     setCustomerMobile('')
+    setCustomerEmail('')
+    setFieldErrors({})
     setError('')
   }
 
@@ -138,7 +144,12 @@ export default function BillingPage() {
   const subtotal = money(
     cartEntries.reduce((sum, item) => sum + Number(item.product.price) * item.qty, 0)
   )
-  const discountPercentVal = Math.min(100, Math.max(0, parseFloat(discountPercent) || 0))
+  // The typed value must be a number from 0 to 100. Anything else is flagged and blocks the sale.
+  const discountTyped = discountPercent.toString().trim()
+  const discountInvalid =
+    discountTyped !== '' &&
+    (Number.isNaN(Number(discountTyped)) || Number(discountTyped) < 0 || Number(discountTyped) > 100)
+  const discountPercentVal = discountInvalid ? 0 : Math.min(100, Math.max(0, parseFloat(discountPercent) || 0))
   const discountAmount = money((subtotal * discountPercentVal) / 100)
   const afterDiscount = money(Math.max(0, subtotal - discountAmount))
 
@@ -164,7 +175,7 @@ export default function BillingPage() {
       setError('Please select a payment mode.')
       return
     }
-    if (discountPercentVal < 0 || discountPercentVal > 100) {
+    if (discountInvalid) {
       setError('Discount percentage must be between 0% and 100%.')
       return
     }
@@ -172,8 +183,20 @@ export default function BillingPage() {
       setError('Please enter a valid final bill amount.')
       return
     }
-    if (customerMobile.trim() && !/^[+\d ()-]{7,20}$/.test(customerMobile.trim())) {
-      setError('Please enter a valid phone number (7–20 digits).')
+
+    // Customer name and mobile number are mandatory; email is optional.
+    const errs = {}
+    if (!customerName.trim()) errs.name = 'Customer name is required.'
+    const mobile = customerMobile.trim()
+    if (!mobile) errs.mobile = 'Mobile number is required.'
+    else if (!/^[+\d ()-]{7,20}$/.test(mobile) || mobile.replace(/\D/g, '').length < 7) {
+      errs.mobile = 'Please enter a valid mobile number (7–20 digits).'
+    }
+    const email = customerEmail.trim()
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) errs.email = 'Please enter a valid email address.'
+    setFieldErrors(errs)
+    if (Object.keys(errs).length > 0) {
+      setError('Please fix the highlighted customer details before confirming the sale.')
       return
     }
 
@@ -216,6 +239,7 @@ export default function BillingPage() {
       customerName: customerName.trim(),
       customer_mobile: customerMobile.trim(),
       customerMobile: customerMobile.trim(),
+      customer_email: customerEmail.trim(),
     }
 
     try {
@@ -480,29 +504,59 @@ export default function BillingPage() {
           <div className="form-grid" style={{ margin: '12px 0 6px' }}>
             <div>
               <label htmlFor="b-cname" style={{ margin: '6px 0 4px', fontSize: 11 }}>
-                Customer name (optional)
+                Customer name <span style={{ color: '#9f3c31' }}>*</span>
               </label>
               <input
                 id="b-cname"
                 maxLength={80}
-                placeholder="Walk-in customer"
+                placeholder="Full name"
+                required
+                aria-invalid={Boolean(fieldErrors.name)}
                 value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
+                onChange={(e) => {
+                  setCustomerName(e.target.value)
+                  if (fieldErrors.name) setFieldErrors((f) => ({ ...f, name: '' }))
+                }}
               />
+              {fieldErrors.name && <div style={fieldErrorStyle}>{fieldErrors.name}</div>}
             </div>
             <div>
               <label htmlFor="b-cmobile" style={{ margin: '6px 0 4px', fontSize: 11 }}>
-                Mobile number (optional)
+                Mobile number <span style={{ color: '#9f3c31' }}>*</span>
               </label>
               <input
                 id="b-cmobile"
                 type="tel"
                 maxLength={20}
                 placeholder="e.g. 9876543210"
+                required
+                aria-invalid={Boolean(fieldErrors.mobile)}
                 value={customerMobile}
-                onChange={(e) => setCustomerMobile(e.target.value)}
+                onChange={(e) => {
+                  setCustomerMobile(e.target.value)
+                  if (fieldErrors.mobile) setFieldErrors((f) => ({ ...f, mobile: '' }))
+                }}
               />
+              {fieldErrors.mobile && <div style={fieldErrorStyle}>{fieldErrors.mobile}</div>}
             </div>
+          </div>
+          <div style={{ margin: '0 0 6px' }}>
+            <label htmlFor="b-cemail" style={{ margin: '6px 0 4px', fontSize: 11 }}>
+              Email address (optional)
+            </label>
+            <input
+              id="b-cemail"
+              type="email"
+              maxLength={120}
+              placeholder="e.g. name@example.com"
+              aria-invalid={Boolean(fieldErrors.email)}
+              value={customerEmail}
+              onChange={(e) => {
+                setCustomerEmail(e.target.value)
+                if (fieldErrors.email) setFieldErrors((f) => ({ ...f, email: '' }))
+              }}
+            />
+            {fieldErrors.email && <div style={fieldErrorStyle}>{fieldErrors.email}</div>}
           </div>
 
           <h3>
@@ -591,7 +645,8 @@ export default function BillingPage() {
                 value={discountPercent}
                 onChange={(e) => setDiscountPercent(e.target.value)}
                 placeholder="0"
-                style={{ paddingRight: 32 }}
+                aria-invalid={discountInvalid}
+                style={{ paddingRight: 32, ...(discountInvalid ? { borderColor: '#9f3c31' } : null) }}
               />
               <span
                 style={{
@@ -608,6 +663,11 @@ export default function BillingPage() {
                 %
               </span>
             </div>
+            {discountInvalid && (
+              <div role="alert" style={fieldErrorStyle}>
+                Discount must be between 0% and 100%.
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 5, marginTop: 6 }}>
               {[5, 10, 15, 20, 25].map((pct) => (
                 <button
@@ -701,7 +761,7 @@ export default function BillingPage() {
           <button
             type="button"
             className="btn primary full"
-            disabled={cartEntries.length === 0 || confirming}
+            disabled={cartEntries.length === 0 || confirming || discountInvalid}
             onClick={handleConfirmSale}
             style={{ marginTop: 10, padding: 14, fontSize: 14 }}
           >

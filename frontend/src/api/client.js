@@ -22,11 +22,14 @@ const errorMessage = (data, status) => {
 }
 
 const request = async (method, path, body) => {
-  let token = 'dev-token'
+  let token
   try {
     token = await getIdToken()
-  } catch {
-    // In dev mode when not signed in, fall back to dev token
+  } catch (err) {
+    // Only while developing locally (no sign-in, backend running with DEBUG=True) a placeholder token is used.
+    // In production a missing sign-in is an error.
+    if (!import.meta.env.DEV) throw err
+    token = 'dev-token'
   }
   let res
   try {
@@ -61,7 +64,7 @@ const withTime = (rows) =>
 export const api = {
   get: async (path) => {
     const data = await request('GET', path)
-    return /^\/?(stock_movements|movements)\/?$/.test(path) ? withTime(data) : data
+    return /^\/?(stock_movements|movements)\/?(\?.*)?$/.test(path) ? withTime(data) : data
   },
   post:   (path, body) => request('POST', path, body ?? {}),
   patch:  (path, body) => request('PATCH', path, body ?? {}),

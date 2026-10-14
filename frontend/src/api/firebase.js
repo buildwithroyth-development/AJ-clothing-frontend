@@ -3,6 +3,9 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  updateProfile,
   signOut as fbSignOut,
 } from 'firebase/auth'
 
@@ -26,8 +29,62 @@ export const signIn = (email, password) =>
 export const signOut = () => fbSignOut(auth)
 export const onUserChange = (cb) => onAuthStateChanged(auth, cb)
 
+// Create an account, store the person's name, and e-mail them a verification link.
+// The new user stays signed in so the app can show the "verify your e-mail" screen.
+export const registerUser = async ({ name, email, password }) => {
+  const cred = await createUserWithEmailAndPassword(auth, email.trim(), password)
+  try {
+    await updateProfile(cred.user, { displayName: name.trim() })
+  } catch {
+    /* the name is cosmetic; the account itself was created */
+  }
+  await sendEmailVerification(cred.user)
+  return cred.user
+}
+
+export const resendVerification = () => {
+  if (!auth.currentUser) throw new Error('Please sign in again.')
+  return sendEmailVerification(auth.currentUser)
+}
+
+// Re-read the account from Firebase (picks up a freshly verified e-mail) and refresh the ID token,
+// so the API sees email_verified = true.
+export const refreshUser = async () => {
+  if (!auth.currentUser) return null
+  await auth.currentUser.reload()
+  await auth.currentUser.getIdToken(true)
+  return auth.currentUser
+}
+
 // Current user's ID token (Firebase refreshes it automatically when it is about to expire).
 export const getIdToken = async () => {
   if (!auth.currentUser) throw new Error('Please sign in to continue.')
   return auth.currentUser.getIdToken()
+}
+
+// Plain-language messages for Firebase Authentication errors.
+export const authErrorMessage = (err, fallback = 'Something went wrong. Please try again.') => {
+  switch (err?.code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+    case 'auth/invalid-login-credentials':
+      return 'Incorrect email or password.'
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.'
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Please sign in instead.'
+    case 'auth/weak-password':
+      return 'Password is too weak. Use at least 6 characters.'
+    case 'auth/user-disabled':
+      return 'This account has been disabled. Please contact the store owner.'
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Please wait a few minutes and try again.'
+    case 'auth/network-request-failed':
+      return 'Network error. Check your connection and try again.'
+    case 'auth/operation-not-allowed':
+      return 'Email/password sign-in is not enabled for this app yet.'
+    default:
+      return err?.message || fallback
+  }
 }
