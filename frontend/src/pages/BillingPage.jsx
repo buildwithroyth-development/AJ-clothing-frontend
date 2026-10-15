@@ -12,7 +12,7 @@ import {
   X,
 } from 'lucide-react'
 import api from '../api/client'
-import { formatINR } from '../utils/format'
+import { formatINR, sanitizePhone } from '../utils/format'
 import VariantPickerModal from '../components/billing/VariantPickerModal'
 import ReceiptModal from '../components/billing/ReceiptModal'
 import ProductIllustration from '../components/common/ProductIllustration'
@@ -527,13 +527,15 @@ export default function BillingPage() {
               <input
                 id="b-cmobile"
                 type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 maxLength={20}
                 placeholder="e.g. 9876543210"
                 required
                 aria-invalid={Boolean(fieldErrors.mobile)}
                 value={customerMobile}
                 onChange={(e) => {
-                  setCustomerMobile(e.target.value)
+                  setCustomerMobile(sanitizePhone(e.target.value))
                   if (fieldErrors.mobile) setFieldErrors((f) => ({ ...f, mobile: '' }))
                 }}
               />
