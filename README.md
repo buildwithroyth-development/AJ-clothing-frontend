@@ -42,8 +42,8 @@ React app (this repo)  ──Firebase ID token──▶  AJ Clothing API (Django
 ## Firebase setup
 
 1. **Enable sign-in**: Firebase console → Authentication → Sign-in method → enable *Email/Password*. Disable *Anonymous*.
-2. **Accounts**: staff can register themselves with *Create account* (they receive a verification email), or you can add them under Authentication → Users → *Add user*.
-3. **Approve each account**: Realtime Database → Data → add `staff/<user UID>` with the value `true` (the UID is in the Users list). Until then a verified user sees *Waiting for approval*. (The backend can also approve verified emails automatically; see its README.)
+2. **Accounts**: people register themselves with *Create account* and receive a verification email, or you can add them under Authentication → Users → *Add user*.
+3. **No approval step**: anyone who creates an account and verifies their email can use the app. To require approval instead, set `AUTO_APPROVE_VERIFIED_USERS=False` on the backend (then add `staff/<user UID>` = `true` in Realtime Database for each person you approve; see the backend README).
 4. **Deploy the rules** in `database.rules.json` (deny all):
    ```bash
    npm install -g firebase-tools
