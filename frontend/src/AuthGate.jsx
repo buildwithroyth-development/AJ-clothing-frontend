@@ -3,6 +3,7 @@ import App from './App'
 import LoginPage from './pages/LoginPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
 import PendingApprovalPage from './pages/PendingApprovalPage'
+import AccountErrorPage from './pages/AccountErrorPage'
 import { onUserChange, signOut, refreshUser } from './api/firebase'
 import api from './api/client'
 
@@ -79,11 +80,11 @@ export default function AuthGate() {
   if (!access) {
     if (accessError) {
       return (
-        <PendingApprovalPage
+        <AccountErrorPage
           email={user.email}
-          busy={checking}
           error={accessError}
-          onCheck={checkAccess}
+          busy={checking}
+          onRetry={checkAccess}
           onSignOut={handleSignOut}
         />
       )
@@ -101,7 +102,6 @@ export default function AuthGate() {
     <PendingApprovalPage
       email={user.email}
       busy={checking}
-      error={accessError}
       onCheck={() => handleVerifiedCheck()}
       onSignOut={handleSignOut}
     />
