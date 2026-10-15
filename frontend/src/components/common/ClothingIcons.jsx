@@ -1,5 +1,3 @@
-import React from 'react'
-
 /**
  * SVG-style vector clothing illustrations for categories.
  * Crafted with crisp 24x24 viewBox lines matching the store's warm aesthetic.
@@ -271,6 +269,7 @@ export function DefaultBagIcon({ size = 24, className = '', strokeWidth = 1.8, .
   )
 }
 
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Returns the matching SVG vector clothing icon based on dynamic category name
  */

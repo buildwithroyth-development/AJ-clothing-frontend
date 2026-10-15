@@ -7,6 +7,5 @@ export const stockPill = (stock) => {
   return <span className="pill ok">{stock} units</span>
 }
 
-// Keeps only what a phone number can contain (digits, +, spaces, hyphens, brackets), so letters
-// cannot be typed or pasted into a mobile number field.
-export const sanitizePhone = (value) => String(value ?? '').replace(/[^\d+()\- ]/g, '')
+// Keeps only digits and limits length to 10 digits
+export const sanitizePhone = (value) => String(value ?? '').replace(/\D/g, '').slice(0, 10)

@@ -53,7 +53,10 @@ export default function ProductModal({
   }
 
   const set = (k) => (e) => {
-    const val = e.target.value
+    let val = e.target.value
+    if (k === 'size') {
+      val = val.replace(/[^a-zA-Z0-9 ]/g, '')
+    }
     setForm((f) => {
       const updated = { ...f, [k]: val }
       // Live check for existing product variant
@@ -105,6 +108,10 @@ export default function ProductModal({
     }
     if (!form.size?.trim()) {
       setErr('Size is required.')
+      return
+    }
+    if (!/^[a-zA-Z0-9 ]+$/.test(form.size.trim())) {
+      setErr('Size can only contain numbers and letters (no special characters).')
       return
     }
     if (form.price === '' || isNaN(form.price) || Number(form.price) < 0) {
@@ -255,6 +262,16 @@ export default function ProductModal({
               id="p-size"
               value={form.size}
               onChange={set('size')}
+              onKeyDown={(e) => {
+                if (
+                  !/[a-zA-Z0-9 ]/.test(e.key) &&
+                  !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes(e.key) &&
+                  !e.ctrlKey &&
+                  !e.metaKey
+                ) {
+                  e.preventDefault()
+                }
+              }}
               placeholder="e.g. M"
               required
             />

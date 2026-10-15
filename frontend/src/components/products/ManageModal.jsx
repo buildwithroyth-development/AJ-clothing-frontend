@@ -12,7 +12,7 @@ export default function ManageModal({ product, onEdit, onDelete, onRestock, onCl
     // Check if initial product already has stock_history from API or localStorage
     const local = localStorage.getItem(`aj-stock-history-${p.id}`)
     if (local) {
-      try { return JSON.parse(local) } catch {}
+      try { return JSON.parse(local) } catch { /* ignore invalid stored JSON */ }
     }
     return p.stock_history || []
   })
@@ -35,7 +35,7 @@ export default function ManageModal({ product, onEdit, onDelete, onRestock, onCl
           setHistory(res)
           localStorage.setItem(`aj-stock-history-${p.id}`, JSON.stringify(res))
         }
-      } catch {}
+      } catch { /* ignore network failure */ }
     }
     fetchHistory()
     return () => { cancelled = true }
@@ -51,7 +51,7 @@ export default function ManageModal({ product, onEdit, onDelete, onRestock, onCl
     setRestocking(true)
     setRestockErr('')
     try {
-      const updated = await onRestock(p, qty)
+      await onRestock(p, qty)
       const newEntry = {
         id: Date.now(),
         change: qty,

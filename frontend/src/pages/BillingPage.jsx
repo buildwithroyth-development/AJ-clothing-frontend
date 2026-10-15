@@ -7,7 +7,6 @@ import {
   ShoppingBag,
   ArrowRight,
   Receipt,
-  Plus,
   Search,
   X,
 } from 'lucide-react'
@@ -52,7 +51,6 @@ export default function BillingPage() {
   }
 
   const loadData = useCallback(async () => {
-    setLoading(true)
     try {
       const [prods, sales] = await Promise.all([
         api.get('/products/').catch(() => []),
@@ -62,8 +60,9 @@ export default function BillingPage() {
       setRecentSales(Array.isArray(sales) ? sales : sales?.results || [])
     } catch {
       /* handled gracefully */
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -188,9 +187,10 @@ export default function BillingPage() {
     const errs = {}
     if (!customerName.trim()) errs.name = 'Customer name is required.'
     const mobile = customerMobile.trim()
-    if (!mobile) errs.mobile = 'Mobile number is required.'
-    else if (!/^[+\d ()-]{7,20}$/.test(mobile) || mobile.replace(/\D/g, '').length < 7) {
-      errs.mobile = 'Please enter a valid mobile number (7–20 digits).'
+    if (!mobile) {
+      errs.mobile = 'Mobile number is required.'
+    } else if (!/^\d{10}$/.test(mobile)) {
+      errs.mobile = 'Please enter a valid 10-digit mobile number.'
     }
     const email = customerEmail.trim()
     if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) errs.email = 'Please enter a valid email address.'
@@ -527,13 +527,23 @@ export default function BillingPage() {
               <input
                 id="b-cmobile"
                 type="tel"
-                inputMode="tel"
+                inputMode="numeric"
                 autoComplete="tel"
-                maxLength={20}
+                maxLength={10}
                 placeholder="e.g. 9876543210"
                 required
                 aria-invalid={Boolean(fieldErrors.mobile)}
                 value={customerMobile}
+                onKeyDown={(e) => {
+                  if (
+                    !/[0-9]/.test(e.key) &&
+                    !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes(e.key) &&
+                    !e.ctrlKey &&
+                    !e.metaKey
+                  ) {
+                    e.preventDefault()
+                  }
+                }}
                 onChange={(e) => {
                   setCustomerMobile(sanitizePhone(e.target.value))
                   if (fieldErrors.mobile) setFieldErrors((f) => ({ ...f, mobile: '' }))

@@ -11,9 +11,10 @@ import { getSettings } from '../../utils/settings'
 export function BillSheet({ sale, storeInfo }) {
   const items = sale.items || []
   const billNum = sale.bill_number || sale.bill || 'AJ-000000'
-  const when = new Date(sale.created_at || sale.at || Date.now())
-  const dateText = when.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-  const timeText = when.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase()
+  const rawDate = sale.created_at || sale.at
+  const when = rawDate ? new Date(rawDate) : null
+  const dateText = when ? when.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  const timeText = when ? when.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase() : '—'
 
   const customerName = sale.customer_name || sale.customerName
   const customerMobile = sale.customer_mobile || sale.customerMobile
@@ -146,11 +147,7 @@ export function BillSheet({ sale, storeInfo }) {
 }
 
 export default function ReceiptModal({ sale, storeInfo: propStoreInfo, onClose }) {
-  const [settings, setSettings] = useState(getSettings)
-
-  useEffect(() => {
-    setSettings(getSettings())
-  }, [])
+  const [settings] = useState(getSettings)
 
   useEffect(() => {
     const handleKeyDown = (e) => {

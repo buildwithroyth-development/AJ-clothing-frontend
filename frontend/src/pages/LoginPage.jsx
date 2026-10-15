@@ -18,7 +18,7 @@ const tabStyle = (active) => ({
 
 const fieldError = { color: '#9f3c31', fontSize: 11, marginTop: 4 }
 
-export default function LoginPage({ onDevBypass }) {
+export default function LoginPage() {
   const [mode, setMode] = useState('signin') // 'signin' | 'register'
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -139,20 +139,6 @@ export default function LoginPage({ onDevBypass }) {
       <button type="submit" className="btn primary full" disabled={busy} style={{ marginTop: 16 }}>
         {busy ? (isRegister ? 'Creating account…' : 'Signing in…') : isRegister ? 'Create account' : 'Sign in'}
       </button>
-
-      {onDevBypass && (
-        <div style={{ marginTop: 16, textAlign: 'center' }}>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>— or local development —</div>
-          <button
-            type="button"
-            className="btn full"
-            onClick={onDevBypass}
-            style={{ background: '#f5f0e6', borderColor: 'var(--line)', fontSize: 13, color: 'var(--ink)' }}
-          >
-            Continue without Sign In (Dev Mode)
-          </button>
-        </div>
-      )}
     </AuthShell>
   )
 }

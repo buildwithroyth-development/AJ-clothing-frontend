@@ -1,14 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { getSettings, saveSettings, DEFAULT_SETTINGS } from '../utils/settings'
 import { formatINR } from '../utils/format'
 
 export default function SettingsPage() {
   const [form, setForm] = useState(getSettings)
   const [notice, setNotice] = useState('')
-
-  useEffect(() => {
-    setForm(getSettings())
-  }, [])
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }))

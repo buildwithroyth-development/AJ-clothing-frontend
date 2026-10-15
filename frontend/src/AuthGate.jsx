@@ -18,11 +18,6 @@ export default function AuthGate() {
   const [access, setAccess] = useState(null) // { approved, email_verified } from the API
   const [checking, setChecking] = useState(false)
   const [accessError, setAccessError] = useState('')
-  // Local development shortcut (never offered in a production build).
-  const devBypassAllowed = import.meta.env.DEV
-  const [devBypass, setDevBypass] = useState(
-    () => devBypassAllowed && localStorage.getItem('aj_dev_bypass') === 'true'
-  )
 
   useEffect(() => onUserChange((u) => { setUser(u); setAccess(null); setAccessError('') }), [])
 
@@ -46,14 +41,7 @@ export default function AuthGate() {
     if (user) checkAccess()
   }, [user, checkAccess])
 
-  const handleBypass = () => {
-    localStorage.setItem('aj_dev_bypass', 'true')
-    setDevBypass(true)
-  }
-
   const handleSignOut = () => {
-    localStorage.removeItem('aj_dev_bypass')
-    setDevBypass(false)
     setAccess(null)
     return signOut()
   }
@@ -73,8 +61,7 @@ export default function AuthGate() {
 
   if (user === undefined) return loading
   if (!user) {
-    if (devBypass) return <App userEmail="dev-staff@ajclothing.com" onSignOut={handleSignOut} />
-    return <LoginPage onDevBypass={devBypassAllowed ? handleBypass : undefined} />
+    return <LoginPage />
   }
 
   if (!access) {

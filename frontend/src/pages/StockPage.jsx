@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Search, X, Loader2, Sparkles, ArrowUpRight, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, X, Sparkles, ArrowUpRight, Pencil, Trash2 } from 'lucide-react'
 import api from '../api/client'
 import { formatINR, stockPill } from '../utils/format'
 import ProductModal from '../components/products/ProductModal'
 import ManageModal from '../components/products/ManageModal'
 import DeleteConfirmModal from '../components/products/DeleteConfirmModal'
+import TableSkeleton from '../components/common/TableSkeleton'
+import Pagination from '../components/common/Pagination'
 
 export default function StockPage() {
   const [products, setProducts]     = useState([])
@@ -12,6 +14,8 @@ export default function StockPage() {
   const [loading, setLoading]       = useState(true)
   const [search, setSearch]         = useState('')
   const [activeCat, setActiveCat]   = useState('All')
+  const [page, setPage]             = useState(1)
+  const [pageSize, setPageSize]     = useState(10)
   const [modal, setModal]           = useState(null) // null | {type:'add'|'edit'|'manage', data?}
   const [notice, setNotice]         = useState('')
 
@@ -21,7 +25,6 @@ export default function StockPage() {
   }
 
   const loadData = useCallback(async () => {
-    setLoading(true)
     try {
       const [prods, cats] = await Promise.all([
         api.get('/products/'),
@@ -31,8 +34,9 @@ export default function StockPage() {
       setCategories(Array.isArray(cats) ? cats : (cats.results || []))
     } catch {
       /* server offline — handled gracefully */
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -52,6 +56,11 @@ export default function StockPage() {
       (p.category_name || '').toLowerCase().includes(q)
     return matchCat && matchSearch
   })
+
+  // Pagination calculation with auto-clamping
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const safePage = Math.min(page, totalPages)
+  const paginatedProducts = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   const handleSave = (saved) => {
     setProducts((ps) => {
@@ -131,13 +140,19 @@ export default function StockPage() {
               className="search-input"
               placeholder="Search name, colour or size…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
             />
             {search && (
               <button
                 type="button"
                 className="search-clear"
-                onClick={() => setSearch('')}
+                onClick={() => {
+                  setSearch('')
+                  setPage(1)
+                }}
                 title="Clear search"
               >
                 <X size={13} />
@@ -156,7 +171,10 @@ export default function StockPage() {
                 type="button"
                 data-category={cat}
                 className={cat === activeCat ? 'active' : ''}
-                onClick={() => setActiveCat(cat)}
+                onClick={() => {
+                  setActiveCat(cat)
+                  setPage(1)
+                }}
               >
                 {cat} <span className="filter-count">{count}</span>
               </button>
@@ -166,7 +184,11 @@ export default function StockPage() {
 
         {/* Table */}
         {loading ? (
-          <div className="empty"><i><Loader2 size={24} className="spin" /></i><strong>Loading…</strong></div>
+          <TableSkeleton
+            type="products"
+            rows={pageSize <= 10 ? 6 : 8}
+            caption="Loading inventory catalogue…"
+          />
         ) : (
           <>
             <div className="table-scroll">
@@ -181,7 +203,7 @@ export default function StockPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((p) => (
+                  {paginatedProducts.map((p) => (
                     <tr key={p.id}>
                       <td>
                         <div className="product-cell">
@@ -251,13 +273,25 @@ export default function StockPage() {
                     <p style={{ margin: '4px 0 12px' }}>Add your first product using the button above.</p>
                   )}
                   {search && (
-                    <button type="button" className="btn tiny" onClick={() => setSearch('')}>
+                    <button type="button" className="btn tiny" onClick={() => { setSearch(''); setPage(1); }}>
                       Clear search
                     </button>
                   )}
                 </div>
               )}
             </div>
+
+            {filtered.length > 0 && (
+              <Pagination
+                currentPage={safePage}
+                totalItems={filtered.length}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[10, 25, 50]}
+                itemLabel="products"
+              />
+            )}
           </>
         )}
       </section>

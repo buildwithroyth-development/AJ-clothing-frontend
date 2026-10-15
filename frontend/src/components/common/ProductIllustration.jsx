@@ -1,5 +1,3 @@
-import React from 'react'
-
 /**
  * Hand-crafted SVG-style vector clothing illustrations.
  * - Pant: Blue denim jeans with realistic seams, pockets, wash & brass rivets
@@ -411,7 +409,7 @@ export default function ProductIllustration({
 }) {
   const c = (category || '').toLowerCase()
 
-  let illustration = null
+  let illustration
   if (/pant|trouser|bottom|jeans|denim|chinos|jogger|cargo/.test(c)) {
     illustration = <DenimJeansIllustration size={svgSize} />
   } else if (/shirt/.test(c) && !/t[ -]?shirt/.test(c)) {

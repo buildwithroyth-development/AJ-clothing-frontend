@@ -28,7 +28,6 @@ export default function DashboardPage({
   const [dayKey, setDayKey]       = useState(() => new Date().toDateString())
 
   const loadDashboardData = useCallback(async () => {
-    setLoading(true)
     try {
       // Only this calendar day's stock movements (from 12:00 AM local time).
       const startOfToday = new Date()
@@ -53,8 +52,9 @@ export default function DashboardPage({
       setSales(salesList)
     } catch (err) {
       console.warn('Dashboard fetch error:', err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
