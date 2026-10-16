@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Printer } from 'lucide-react'
+import { X, Printer, Mail, CheckCircle2, AlertCircle, Loader2, Send } from 'lucide-react'
+import api from '../../api/client'
 import { formatINR } from '../../utils/format'
 import { getSettings } from '../../utils/settings'
 
@@ -148,6 +149,17 @@ export function BillSheet({ sale, storeInfo }) {
 
 export default function ReceiptModal({ sale, storeInfo: propStoreInfo, onClose }) {
   const [settings] = useState(getSettings)
+  const [currentSale, setCurrentSale] = useState(sale)
+  const [showEmailForm, setShowEmailForm] = useState(false)
+  const [emailInput, setEmailInput] = useState(sale?.customer_email || sale?.customerEmail || '')
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailNotice, setEmailNotice] = useState(null) // { type: 'success' | 'error', text: '' }
+
+  useEffect(() => {
+    setCurrentSale(sale)
+    setEmailInput(sale?.customer_email || sale?.customerEmail || '')
+    setEmailNotice(null)
+  }, [sale])
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -157,7 +169,7 @@ export default function ReceiptModal({ sale, storeInfo: propStoreInfo, onClose }
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
-  if (!sale) return null
+  if (!currentSale) return null
 
   const storeInfo = propStoreInfo || {
     name: settings.storeName || 'AJ Clothing Store',
@@ -169,10 +181,8 @@ export default function ReceiptModal({ sale, storeInfo: propStoreInfo, onClose }
     note: settings.note || 'Thank you for shopping with us! Returns within 7 days with tag intact.',
   }
 
-  const billNum = sale.bill_number || sale.bill || 'AJ-000000'
+  const billNum = currentSale.bill_number || currentSale.bill || 'AJ-000000'
 
-  // Browsers suggest the page title as the PDF file name, so the bill number becomes
-  // the file name (e.g. AJ-000001.pdf). The title is put back once printing is done.
   const handlePrint = () => {
     const previousTitle = document.title
     const restore = () => {
@@ -183,6 +193,39 @@ export default function ReceiptModal({ sale, storeInfo: propStoreInfo, onClose }
     window.addEventListener('afterprint', restore)
     window.print()
   }
+
+  const handleSendEmail = async (overrideTarget) => {
+    const target = (typeof overrideTarget === 'string' ? overrideTarget : emailInput).trim()
+    if (!target || !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(target)) {
+      setShowEmailForm(true)
+      setEmailNotice({ type: 'error', text: 'Please enter a valid email address.' })
+      return
+    }
+
+    setSendingEmail(true)
+    setEmailNotice(null)
+
+    try {
+      const res = await api.post(`/sales/${currentSale.id || billNum}/send_email/`, { email: target })
+      const updated = res.sale || { ...currentSale, customer_email: target, email_status: 'sent' }
+      setCurrentSale(updated)
+      setShowEmailForm(false)
+      setEmailNotice({
+        type: 'success',
+        text: `Receipt PDF successfully sent to ${target}!`,
+      })
+    } catch (err) {
+      setEmailNotice({
+        type: 'error',
+        text: err.message || 'Failed to send receipt email. Please verify connection and SMTP settings.',
+      })
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+
+  const emailStatus = currentSale.email_status
+  const customerEmail = currentSale.customer_email || currentSale.customerEmail
 
   return (
     <>
@@ -195,28 +238,183 @@ export default function ReceiptModal({ sale, storeInfo: propStoreInfo, onClose }
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+          {/* Action Toolbar */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
             <button
               type="button"
-              className="btn primary full"
+              className="btn full"
               onClick={handlePrint}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 42 }}
             >
-              <Printer size={16} /> Print / Save PDF ({billNum}.pdf)
+              <Printer size={16} /> Print / Save PDF
+            </button>
+            <button
+              type="button"
+              className={`btn full ${emailStatus === 'sent' ? '' : 'primary'}`}
+              onClick={() => {
+                if (showEmailForm) {
+                  handleSendEmail()
+                } else if (customerEmail) {
+                  handleSendEmail(customerEmail)
+                } else {
+                  setShowEmailForm(true)
+                }
+              }}
+              disabled={sendingEmail}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                height: 42,
+                borderColor: emailStatus === 'sent' ? '#3c7a52' : undefined,
+                background: emailStatus === 'sent' ? '#edf7f0' : undefined,
+                color: emailStatus === 'sent' ? '#2e6b43' : undefined,
+              }}
+              title={customerEmail ? `Send PDF bill to ${customerEmail}` : 'Send PDF bill to customer email'}
+            >
+              {sendingEmail ? (
+                <Loader2 size={16} className="spin" />
+              ) : (
+                <Mail size={16} />
+              )}
+              {sendingEmail
+                ? 'Sending bill…'
+                : emailStatus === 'sent'
+                ? 'Resend Bill'
+                : customerEmail
+                ? 'Send Bill to Email'
+                : 'Send Bill'}
             </button>
           </div>
 
-          <BillSheet sale={sale} storeInfo={storeInfo} />
+          {/* Recipient status & change email trigger */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, marginBottom: 10, padding: '0 2px' }}>
+            <span className="muted">
+              {customerEmail ? (
+                <>Recipient: <strong>{customerEmail}</strong></>
+              ) : (
+                <>No email attached to this bill</>
+              )}
+            </span>
+            <button
+              type="button"
+              className="btn tiny"
+              style={{ padding: '2px 8px', fontSize: 11 }}
+              onClick={() => {
+                setShowEmailForm((prev) => !prev)
+                setEmailNotice(null)
+              }}
+            >
+              {showEmailForm ? 'Hide' : customerEmail ? 'Change email' : 'Add email'}
+            </button>
+          </div>
+
+          {/* Email Form / Feedback */}
+          {showEmailForm && (
+            <form onSubmit={(e) => { e.preventDefault(); handleSendEmail(); }} style={{ background: 'var(--card)', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', marginBottom: 14, display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="email"
+                placeholder="customer@example.com"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                autoFocus
+                style={{ flex: 1, margin: 0, padding: '7px 10px', fontSize: 13 }}
+                disabled={sendingEmail}
+              />
+              <button
+                type="submit"
+                className="btn primary tiny"
+                disabled={sendingEmail}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, height: 34, padding: '0 14px' }}
+              >
+                {sendingEmail ? <Loader2 size={13} className="spin" /> : <Send size={13} />}
+                {sendingEmail ? 'Sending…' : 'Send'}
+              </button>
+              <button
+                type="button"
+                className="btn tiny"
+                onClick={() => setShowEmailForm(false)}
+                disabled={sendingEmail}
+                style={{ height: 34 }}
+              >
+                Cancel
+              </button>
+            </form>
+          )}
+
+          {emailNotice && (
+            <div
+              style={{
+                padding: '8px 12px',
+                borderRadius: 6,
+                fontSize: 12,
+                marginBottom: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: emailNotice.type === 'success' ? '#edf7f0' : '#fdf2f2',
+                color: emailNotice.type === 'success' ? '#2e6b43' : '#a32b2b',
+                border: `1px solid ${emailNotice.type === 'success' ? '#c2e5ce' : '#f3c4c4'}`,
+              }}
+            >
+              {emailNotice.type === 'success' ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
+              <span>{emailNotice.text}</span>
+            </div>
+          )}
+
+          {!emailNotice && emailStatus === 'sent' && (
+            <div
+              style={{
+                padding: '6px 12px',
+                borderRadius: 6,
+                fontSize: 12,
+                marginBottom: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: '#edf7f0',
+                color: '#2e6b43',
+                border: '1px solid #c2e5ce',
+              }}
+            >
+              <CheckCircle2 size={15} />
+              <span>Receipt PDF was sent to <strong>{customerEmail}</strong></span>
+            </div>
+          )}
+
+          {!emailNotice && emailStatus === 'failed' && (
+            <div
+              style={{
+                padding: '6px 12px',
+                borderRadius: 6,
+                fontSize: 12,
+                marginBottom: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: '#fdf2f2',
+                color: '#a32b2b',
+                border: '1px solid #f3c4c4',
+              }}
+            >
+              <AlertCircle size={15} />
+              <span>Email delivery failed ({currentSale.email_error || 'SMTP Error'}). Click &quot;Send Bill&quot; to retry.</span>
+            </div>
+          )}
+
+          <BillSheet sale={currentSale} storeInfo={storeInfo} />
         </div>
       </div>
 
       {/* The printed copy lives outside the app root so printing shows this bill only, on one page. */}
       {createPortal(
         <div className="print-root" aria-hidden="true">
-          <BillSheet sale={sale} storeInfo={storeInfo} />
+          <BillSheet sale={currentSale} storeInfo={storeInfo} />
         </div>,
         document.body
       )}
     </>
   )
 }
+

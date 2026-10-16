@@ -569,6 +569,9 @@ export default function BillingPage() {
               }}
             />
             {fieldErrors.email && <div style={fieldErrorStyle}>{fieldErrors.email}</div>}
+            <small className="muted" style={{ fontSize: 10, display: 'block', marginTop: 3 }}>
+              A &quot;Send Bill&quot; button will be available immediately after confirming the bill.
+            </small>
           </div>
 
           <h3>

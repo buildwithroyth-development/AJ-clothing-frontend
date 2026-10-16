@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, X, Sparkles, Printer, Receipt, Eye } from 'lucide-react'
+import { Search, X, Sparkles, Printer, Receipt, Eye, Mail } from 'lucide-react'
 import api from '../api/client'
 import { formatINR } from '../utils/format'
 import ReceiptModal from '../components/billing/ReceiptModal'
@@ -111,6 +111,7 @@ export default function AllBillsPage() {
                     <th>MOBILE</th>
                     <th>PAYMENT</th>
                     <th>TOTAL</th>
+                    <th>EMAIL RECEIPT</th>
                     <th style={{ textAlign: 'right', paddingRight: 16 }}>ACTIONS</th>
                   </tr>
                 </thead>
@@ -127,6 +128,9 @@ export default function AllBillsPage() {
                           minute: '2-digit',
                         })
                       : 'Today'
+
+                    const email = s.customer_email || s.customerEmail
+                    const emailStatus = s.email_status
 
                     return (
                       <tr key={s.id || billNum}>
@@ -146,6 +150,23 @@ export default function AllBillsPage() {
                         </td>
                         <td style={{ fontWeight: 700, color: 'var(--ink)' }} className="bill-num-text">{formatINR(s.total)}</td>
                         <td>
+                          {emailStatus === 'sent' ? (
+                            <span className="pill ok" style={{ background: '#edf7f0', color: '#2e6b43', fontSize: 11, padding: '2px 8px' }} title={`Sent to ${email}`}>
+                              Sent
+                            </span>
+                          ) : emailStatus === 'failed' ? (
+                            <span className="pill low" style={{ background: '#fdf2f2', color: '#a32b2b', fontSize: 11, padding: '2px 8px' }} title={s.email_error || 'Failed'}>
+                              Failed
+                            </span>
+                          ) : email ? (
+                            <span className="pill mid" style={{ fontSize: 11, padding: '2px 8px' }} title={`Pending for ${email}`}>
+                              Pending
+                            </span>
+                          ) : (
+                            <span className="muted" style={{ fontSize: 11 }}>—</span>
+                          )}
+                        </td>
+                        <td>
                           <div className="product-actions" style={{ justifyContent: 'flex-end' }}>
                             <button
                               type="button"
@@ -158,7 +179,7 @@ export default function AllBillsPage() {
                               type="button"
                               className="btn tiny primary"
                               onClick={() => setViewingSale(s)}
-                              title="Print receipt"
+                              title="Print receipt or email PDF"
                             >
                               <Printer size={13} style={{ marginRight: 4 }} /> Print / PDF
                             </button>
@@ -206,9 +227,13 @@ export default function AllBillsPage() {
       {viewingSale && (
         <ReceiptModal
           sale={viewingSale}
-          onClose={() => setViewingSale(null)}
+          onClose={() => {
+            setViewingSale(null)
+            loadSales()
+          }}
         />
       )}
     </div>
   )
 }
+

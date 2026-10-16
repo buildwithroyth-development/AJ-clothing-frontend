@@ -21,14 +21,22 @@ export default function AuthGate() {
 
   useEffect(() => onUserChange((u) => { setUser(u); setAccess(null); setAccessError('') }), [])
 
-  const checkAccess = useCallback(async () => {
+  const checkAccess = useCallback(async (forceRefresh = false) => {
     setChecking(true)
     setAccessError('')
     try {
+      if (forceRefresh) {
+        await refreshUser().catch(() => {})
+      }
       const me = await api.get('/me/')
       setAccess(me)
       return me
     } catch (err) {
+      // If the session has expired or is invalid, sign out cleanly to return to the sign in screen
+      if (err.message && (err.message.toLowerCase().includes('expired') || err.message.toLowerCase().includes('sign in again'))) {
+        await signOut().catch(() => {})
+        return null
+      }
       setAccessError(err.message || 'Could not check your account. Please try again.')
       return null
     } finally {
@@ -49,7 +57,7 @@ export default function AuthGate() {
   // "I have verified my email": refresh the account + token, then ask the API again.
   const handleVerifiedCheck = async () => {
     const fresh = await refreshUser()
-    const me = await checkAccess()
+    const me = await checkAccess(true)
     return Boolean(fresh?.emailVerified || me?.email_verified)
   }
 
@@ -71,11 +79,12 @@ export default function AuthGate() {
           email={user.email}
           error={accessError}
           busy={checking}
-          onRetry={checkAccess}
+          onRetry={() => checkAccess(true)}
           onSignOut={handleSignOut}
         />
       )
     }
+
     return loading
   }
 

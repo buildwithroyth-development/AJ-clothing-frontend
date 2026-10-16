@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   updateProfile,
   signOut as fbSignOut,
 } from 'firebase/auth'
@@ -47,6 +48,9 @@ export const resendVerification = () => {
   return sendEmailVerification(auth.currentUser)
 }
 
+export const sendPasswordReset = (email) =>
+  sendPasswordResetEmail(auth, email.trim())
+
 // Re-read the account from Firebase (picks up a freshly verified e-mail) and refresh the ID token,
 // so the API sees email_verified = true.
 export const refreshUser = async () => {
@@ -56,10 +60,10 @@ export const refreshUser = async () => {
   return auth.currentUser
 }
 
-// Current user's ID token (Firebase refreshes it automatically when it is about to expire).
-export const getIdToken = async () => {
+// Current user's ID token (with optional force refresh).
+export const getIdToken = async (forceRefresh = false) => {
   if (!auth.currentUser) throw new Error('Please sign in to continue.')
-  return auth.currentUser.getIdToken()
+  return auth.currentUser.getIdToken(forceRefresh)
 }
 
 // Plain-language messages for Firebase Authentication errors.
@@ -84,7 +88,12 @@ export const authErrorMessage = (err, fallback = 'Something went wrong. Please t
       return 'Network error. Check your connection and try again.'
     case 'auth/operation-not-allowed':
       return 'Email/password sign-in is not enabled for this app yet.'
+    case 'auth/expired-action-code':
+      return 'The link has expired. Please request a new one.'
+    case 'auth/invalid-action-code':
+      return 'The link is invalid or has already been used.'
     default:
       return err?.message || fallback
   }
 }
+

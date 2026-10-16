@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { signIn, registerUser, authErrorMessage } from '../api/firebase'
+import { signIn, registerUser, sendPasswordReset, authErrorMessage } from '../api/firebase'
 import AuthShell from '../components/auth/AuthShell'
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/
@@ -19,7 +19,7 @@ const tabStyle = (active) => ({
 const fieldError = { color: '#9f3c31', fontSize: 11, marginTop: 4 }
 
 export default function LoginPage() {
-  const [mode, setMode] = useState('signin') // 'signin' | 'register'
+  const [mode, setMode] = useState('signin') // 'signin' | 'register' | 'forgot'
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   const switchMode = (next) => {
     setMode(next)
@@ -34,6 +35,7 @@ export default function LoginPage() {
     setFormError('')
     setPassword('')
     setConfirm('')
+    setResetSent(false)
   }
 
   const validate = () => {
@@ -41,14 +43,22 @@ export default function LoginPage() {
     if (mode === 'register' && !name.trim()) e.name = 'Please enter your full name.'
     if (!email.trim()) e.email = 'Email address is required.'
     else if (!EMAIL_RE.test(email.trim())) e.email = 'Please enter a valid email address.'
-    if (!password) e.password = 'Password is required.'
-    else if (mode === 'register' && password.length < 6) e.password = 'Password must be at least 6 characters.'
-    if (mode === 'register' && confirm !== password) e.confirm = 'Passwords do not match.'
+
+    if (mode !== 'forgot') {
+      if (!password) e.password = 'Password is required.'
+      else if (mode === 'register' && password.length < 6) e.password = 'Password must be at least 6 characters.'
+      if (mode === 'register' && confirm !== password) e.confirm = 'Passwords do not match.'
+    }
     return e
   }
 
   const handleSubmit = async (ev) => {
     ev.preventDefault()
+    if (mode === 'forgot' && resetSent) {
+      switchMode('signin')
+      return
+    }
+
     const e = validate()
     setErrors(e)
     setFormError('')
@@ -56,37 +66,82 @@ export default function LoginPage() {
 
     setBusy(true)
     try {
-      if (mode === 'register') await registerUser({ name, email, password })
-      else await signIn(email, password)
+      if (mode === 'register') {
+        await registerUser({ name, email, password })
+      } else if (mode === 'forgot') {
+        await sendPasswordReset(email)
+        setResetSent(true)
+      } else {
+        await signIn(email, password)
+      }
       // On success the app notices the new session and shows the next screen.
     } catch (err) {
-      const msg = authErrorMessage(err, 'Could not complete the request.')
-      if (err?.code === 'auth/email-already-in-use') setErrors({ email: msg })
-      else setFormError(msg)
+      if (mode === 'forgot') {
+        if (err?.code === 'auth/user-not-found') {
+          setErrors({ email: 'No account was found with this email address.' })
+        } else {
+          setFormError(authErrorMessage(err, 'Could not send password reset email.'))
+        }
+      } else {
+        const msg = authErrorMessage(err, 'Could not complete the request.')
+        if (err?.code === 'auth/email-already-in-use') setErrors({ email: msg })
+        else setFormError(msg)
+      }
+    } finally {
       setBusy(false)
     }
   }
 
   const isRegister = mode === 'register'
+  const isForgot = mode === 'forgot'
+
+  let title = 'Sign in'
+  let subtitle = 'Sign in to manage stock and billing.'
+
+  if (isRegister) {
+    title = 'Create your account'
+    subtitle = 'We will email you a link to verify your address before you can sign in.'
+  } else if (isForgot) {
+    title = 'Reset your password'
+    subtitle = resetSent
+      ? 'Check your inbox for password reset instructions.'
+      : 'Enter your email address and we will send you a password reset link.'
+  }
 
   return (
     <AuthShell
-      title={isRegister ? 'Create your account' : 'Sign in'}
-      subtitle={
-        isRegister
-          ? 'We will email you a link to verify your address before you can sign in.'
-          : 'Sign in to manage stock and billing.'
-      }
+      title={title}
+      subtitle={subtitle}
       onSubmit={handleSubmit}
     >
-      <div style={{ display: 'flex', marginBottom: 16 }} role="tablist">
-        <button type="button" role="tab" aria-selected={!isRegister} style={tabStyle(!isRegister)} onClick={() => switchMode('signin')}>
-          Sign in
-        </button>
-        <button type="button" role="tab" aria-selected={isRegister} style={tabStyle(isRegister)} onClick={() => switchMode('register')}>
-          Create account
-        </button>
-      </div>
+      {!isForgot ? (
+        <div style={{ display: 'flex', marginBottom: 16 }} role="tablist">
+          <button type="button" role="tab" aria-selected={!isRegister} style={tabStyle(!isRegister)} onClick={() => switchMode('signin')}>
+            Sign in
+          </button>
+          <button type="button" role="tab" aria-selected={isRegister} style={tabStyle(isRegister)} onClick={() => switchMode('register')}>
+            Create account
+          </button>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 16 }}>
+          <button
+            type="button"
+            onClick={() => switchMode('signin')}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              color: 'var(--accent)',
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 500,
+            }}
+          >
+            ← Back to Sign in
+          </button>
+        </div>
+      )}
 
       {formError && (
         <div className="notice error" role="alert" style={{ marginBottom: 12 }}>
@@ -94,51 +149,113 @@ export default function LoginPage() {
         </div>
       )}
 
-      {isRegister && (
+      {isForgot && resetSent ? (
+        <div>
+          <div className="notice success" role="status" style={{ marginBottom: 16 }}>
+            Password reset email sent to <strong>{email}</strong>. Please check your inbox and spam folder, click the link to reset your password, and then sign in.
+          </div>
+          <button
+            type="button"
+            className="btn primary full"
+            onClick={() => switchMode('signin')}
+          >
+            Back to Sign in
+          </button>
+        </div>
+      ) : (
         <>
-          <label htmlFor="auth-name">Full name</label>
-          <input id="auth-name" autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
-          {errors.name && <div style={fieldError}>{errors.name}</div>}
-        </>
-      )}
+          {isRegister && (
+            <>
+              <label htmlFor="auth-name">Full name</label>
+              <input id="auth-name" autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
+              {errors.name && <div style={fieldError}>{errors.name}</div>}
+            </>
+          )}
 
-      <label htmlFor="auth-email" style={{ marginTop: isRegister ? 10 : 0, display: 'block' }}>Email</label>
-      <input
-        id="auth-email"
-        type="email"
-        autoComplete="username"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      {errors.email && <div style={fieldError}>{errors.email}</div>}
-
-      <label htmlFor="auth-password" style={{ marginTop: 10, display: 'block' }}>Password</label>
-      <input
-        id="auth-password"
-        type="password"
-        autoComplete={isRegister ? 'new-password' : 'current-password'}
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      {errors.password && <div style={fieldError}>{errors.password}</div>}
-
-      {isRegister && (
-        <>
-          <label htmlFor="auth-confirm" style={{ marginTop: 10, display: 'block' }}>Confirm password</label>
+          <label htmlFor="auth-email" style={{ marginTop: isRegister ? 10 : 0, display: 'block' }}>Email</label>
           <input
-            id="auth-confirm"
-            type="password"
-            autoComplete="new-password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
+            id="auth-email"
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
-          {errors.confirm && <div style={fieldError}>{errors.confirm}</div>}
+          {errors.email && <div style={fieldError}>{errors.email}</div>}
+
+          {!isForgot && (
+            <>
+              <label htmlFor="auth-password" style={{ marginTop: 10, display: 'block' }}>Password</label>
+              <input
+                id="auth-password"
+                type="password"
+                autoComplete={isRegister ? 'new-password' : 'current-password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              {errors.password && <div style={fieldError}>{errors.password}</div>}
+
+              {!isRegister && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      color: 'var(--accent)',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {isRegister && (
+            <>
+              <label htmlFor="auth-confirm" style={{ marginTop: 10, display: 'block' }}>Confirm password</label>
+              <input
+                id="auth-confirm"
+                type="password"
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+              {errors.confirm && <div style={fieldError}>{errors.confirm}</div>}
+            </>
+          )}
+
+          <button type="submit" className="btn primary full" disabled={busy} style={{ marginTop: 16 }}>
+            {busy
+              ? (isRegister ? 'Creating account…' : isForgot ? 'Sending reset link…' : 'Signing in…')
+              : (isRegister ? 'Create account' : isForgot ? 'Send reset link' : 'Sign in')}
+          </button>
+
+          {isForgot && (
+            <div style={{ marginTop: 14, textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--muted)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  textDecoration: 'underline',
+                }}
+              >
+                Cancel and return to Sign in
+              </button>
+            </div>
+          )}
         </>
       )}
-
-      <button type="submit" className="btn primary full" disabled={busy} style={{ marginTop: 16 }}>
-        {busy ? (isRegister ? 'Creating account…' : 'Signing in…') : isRegister ? 'Create account' : 'Sign in'}
-      </button>
     </AuthShell>
   )
 }
