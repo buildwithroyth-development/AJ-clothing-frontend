@@ -178,7 +178,9 @@ export default function ReceiptModal({ sale, storeInfo: propStoreInfo, onClose }
     phone: settings.phone || '+91 98765 43210',
     email: settings.email || 'contact@ajclothing.com',
     gstin: settings.gstin || '',
-    note: settings.note || 'Thank you for shopping with us! Returns within 7 days with tag intact.',
+    note: (settings.note || 'Thank you for shopping with us!')
+      .replace(/returns?\s+within\s+\d+\s+days[^\n.]*\.?/gi, '')
+      .trim() || 'Thank you for shopping with us!',
   }
 
   const billNum = currentSale.bill_number || currentSale.bill || 'AJ-000000'
