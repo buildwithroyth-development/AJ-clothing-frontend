@@ -12,9 +12,17 @@ const errorMessage = (data, status) => {
   if (data && typeof data === 'object') {
     if (typeof data.error === 'string') return data.error
     if (typeof data.detail === 'string') return data.detail
-    const parts = Object.entries(data).map(
-      ([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`
-    )
+    if (data.result && typeof data.result === 'object' && typeof data.result.error === 'string') {
+      return data.result.error
+    }
+    const parts = Object.entries(data).map(([k, v]) => {
+      if (v && typeof v === 'object') {
+        if (typeof v.error === 'string') return `${k}: ${v.error}`
+        if (typeof v.message === 'string') return `${k}: ${v.message}`
+        return `${k}: ${JSON.stringify(v)}`
+      }
+      return `${k}: ${Array.isArray(v) ? v.join(', ') : v}`
+    })
     if (parts.length) return parts.join(' | ')
   }
   if (typeof data === 'string' && data) return data
